@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DENDOR — bio // DeWorld dev</title>
+  <meta name="description" content="DENDOR — разработчик DeWorld, Minecraft-плагины, серверы, видео и музыка.">
+  <meta name="theme-color" content="#050608">
+  <meta property="og:title" content="DENDOR — bio // DeWorld dev">
+  <meta property="og:description" content="Minecraft-плагины, серверы, код и немного магии.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://dendor.deworld.su">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23050608'/><text x='2' y='12' font-family='monospace' font-size='11' fill='%2339ff88'>D_</text></svg>">
+</head>
+<body>
+
+  <!-- BOOT SEQUENCE -->
+  <div id="boot" class="boot" aria-hidden="true">
+    <pre id="boot-out" class="boot-out"></pre>
+    <div class="boot-hint">нажми любую клавишу, чтобы пропустить</div>
+  </div>
+
+  <!-- BACKDROPS -->
+  <canvas id="matrix" class="matrix" aria-hidden="true"></canvas>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a class="brand" href="#home"><span class="brand-prompt">$</span> dendor<span class="dim">:~#</span></a>
+    <nav class="nav">
+      <a href="#about">about</a>
+      <a href="#skills">skills</a>
+      <a href="#projects">projects</a>
+      <a href="#widgets">widgets</a>
+    </nav>
+    <div class="topclock" id="topclock">--:--:--</div>
+  </header>
+
+  <main>
+
+    <!-- HERO -->
+    <section id="home" class="hero">
+      <div class="hero-tag reveal">[ system online ]</div>
+      <h1 class="glitch reveal" data-text="DENDOR">DENDOR</h1>
+      <p class="hero-sub reveal">
+        <span class="prompt-gt">&gt;</span>
+        <span id="hero-type"></span><span class="cursor">█</span>
+      </p>
+      <div class="hero-meta reveal">
+        <span class="led led-on"></span>
+        <span id="hero-status">online</span>
+        <span class="sep">//</span>
+        <span>DeWorld dev</span>
+        <span class="sep">//</span>
+        <span class="mono-dim" id="hero-clock">--:--:--</span>
+      </div>
+      <div class="hero-btns reveal">
+        <a class="btn btn-solid" href="#widgets">./widgets --live</a>
+        <a class="btn" href="https://t.me/tg_dendor" target="_blank" rel="noopener">telegram</a>
+        <a class="btn" href="https://discord.deworld.su" target="_blank" rel="noopener">discord</a>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about" class="sec">
+      <h2 class="sec-title" data-text="whoami — обо мне">whoami — обо мне</h2>
+      <div class="about-grid">
+        <div class="card about-card reveal">
+          <p class="about-bio" id="about-bio"></p>
+          <div class="about-facts">
+            <div class="fact"><span class="fact-k">location</span><span class="fact-v">Earth / internet</span></div>
+            <div class="fact"><span class="fact-k">status</span><span class="fact-v"><span class="led led-on"></span> open for projects</span></div>
+            <div class="fact"><span class="fact-k">site</span><a class="fact-v link" href="https://deworld.su" target="_blank" rel="noopener">deworld.su</a></div>
+          </div>
+        </div>
+        <div class="contacts" id="contacts"><!-- social cards (JS) --></div>
+      </div>
+    </section>
+
+    <!-- SKILLS -->
+    <section id="skills" class="sec">
+      <h2 class="sec-title" data-text="skills --list">skills --list</h2>
+      <div class="card reveal">
+        <div class="skills" id="skills-list"><!-- bars (JS) --></div>
+      </div>
+    </section>
+
+    <!-- PROJECTS -->
+    <section id="projects" class="sec">
+      <h2 class="sec-title" data-text="projects --all">projects --all</h2>
+      <div class="projects" id="projects-list"><!-- cards (JS) --></div>
+    </section>
+
+    <!-- WIDGETS -->
+    <section id="widgets" class="sec">
+      <h2 class="sec-title" data-text="widgets --live">widgets --live</h2>
+
+      <div class="grid">
+
+        <!-- MINECRAFT -->
+        <article class="card w-mc reveal">
+          <header class="w-head">
+            <span class="w-title">mc.server.status</span>
+            <span class="w-status"><span class="led led-blink" id="mc-led"></span><span id="mc-state">ping…</span></span>
+          </header>
+          <div class="mc-body">
+            <img class="mc-icon" id="mc-icon" alt="" hidden>
+            <div class="mc-main">
+              <div class="mc-addr" id="mc-addr">mc.deworld.su</div>
+              <pre class="mc-motd" id="mc-motd">loading…</pre>
+            </div>
+          </div>
+          <div class="mc-stats">
+            <div class="stat"><span class="stat-n" id="mc-online">—</span><span class="stat-l">игроков</span></div>
+            <div class="stat"><span class="stat-n" id="mc-max">—</span><span class="stat-l">слотов</span></div>
+            <div class="stat"><span class="stat-n" id="mc-ping">—</span><span class="stat-l">мс</span></div>
+            <div class="stat"><span class="stat-n mc-ver" id="mc-ver">—</span><span class="stat-l">версия</span></div>
+          </div>
+          <div class="w-actions">
+            <a class="btn btn-solid" id="mc-connect" href="#">подключиться</a>
+            <button class="btn" id="mc-copy" type="button">копировать IP</button>
+          </div>
+        </article>
+
+        <!-- YOUTUBE CAROUSEL -->
+        <article class="card w-yt reveal">
+          <header class="w-head">
+            <span class="w-title">youtube --latest</span>
+            <span class="w-status" id="yt-count">загрузка…</span>
+          </header>
+          <div class="yt-carousel">
+            <div class="yt-track" id="yt-track"></div>
+            <button class="yt-nav yt-prev" id="yt-prev" aria-label="предыдущее видео">‹</button>
+            <button class="yt-nav yt-next" id="yt-next" aria-label="следующее видео">›</button>
+          </div>
+          <div class="yt-dots" id="yt-dots"></div>
+          <div class="w-actions">
+            <a class="btn" id="yt-channel" href="#" target="_blank" rel="noopener">канал @deworld_ru</a>
+          </div>
+        </article>
+
+        <!-- GITHUB STATS -->
+        <article class="card w-gh reveal">
+          <header class="w-head">
+            <span class="w-title">github --stats</span>
+            <span class="w-status">DENDORoff</span>
+          </header>
+          <div class="gh-imgs">
+            <img class="gh-img" alt="GitHub stats"
+                 src="https://github-readme-stats.vercel.app/api?username=DENDORoff&show_icons=true&hide_border=true&border_radius=8&bg_color=0a1013&title_color=39ff88&icon_color=39ff88&text_color=c9d1d9&ring_color=39ff88&include_all_commits=true">
+            <img class="gh-img" alt="GitHub streak"
+                 src="https://streak-stats.demolab.com?user=DENDORoff&hide_border=true&border_radius=8&background=0A1013&stroke=1B2B24&ring=39ff88&fire=39ff88&currStreakNum=c9d1d9&sideNums=c9d1d9&currStreakLabel=39ff88&sideLabels=5f7a70&dates=5f7a70&label=commits">
+            <img class="gh-img" alt="Top languages"
+                 src="https://github-readme-stats.vercel.app/api/top-langs/?username=DENDORoff&layout=compact&hide_border=true&border_radius=8&bg_color=0a1013&title_color=39ff88&text_color=c9d1d9&langs_count=8">
+          </div>
+        </article>
+
+        <!-- GITHUB ACTIVITY GRAPH -->
+        <article class="card w-graph reveal">
+          <header class="w-head">
+            <span class="w-title">github --activity</span>
+            <span class="w-status" id="gh-total">…</span>
+          </header>
+          <canvas id="gh-graph" class="gh-graph" height="140"></canvas>
+          <div class="graph-legend">
+            <span>меньше</span>
+            <i class="lv lv0"></i><i class="lv lv1"></i><i class="lv lv2"></i><i class="lv lv3"></i><i class="lv lv4"></i>
+            <span>больше</span>
+          </div>
+        </article>
+
+        <!-- RANDOM REPO -->
+        <article class="card w-repo reveal">
+          <header class="w-head">
+            <span class="w-title">github --random-repo</span>
+            <span class="w-status" id="repo-index">?</span>
+          </header>
+          <div class="repo-body" id="repo-body">
+            <div class="repo-name" id="repo-name">—</div>
+            <p class="repo-desc" id="repo-desc">загрузка…</p>
+            <div class="repo-meta">
+              <span class="chip" id="repo-lang">—</span>
+              <span class="chip" id="repo-stars">★ 0</span>
+              <span class="chip" id="repo-upd">—</span>
+            </div>
+            <div class="w-actions">
+              <a class="btn btn-solid" id="repo-link" href="#" target="_blank" rel="noopener">открыть →</a>
+              <button class="btn" id="repo-roll" type="button">ещё репозиторий</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- DISCORD SERVER -->
+        <article class="card w-dsc reveal">
+          <header class="w-head">
+            <span class="w-title">discord --server</span>
+            <span class="w-status"><span class="led led-blink"></span><span id="dsc-online">…</span> онлайн</span>
+          </header>
+          <div class="dsc-name" id="dsc-name">DEWORLD</div>
+          <div class="dsc-members" id="dsc-members"></div>
+          <div class="w-actions">
+            <a class="btn btn-solid" id="dsc-invite" href="https://discord.deworld.su" target="_blank" rel="noopener">войти на сервер</a>
+          </div>
+        </article>
+
+        <!-- DISCORD USER (Lanyard) -->
+        <article class="card w-user reveal">
+          <header class="w-head">
+            <span class="w-title">discord --me</span>
+            <span class="w-status" id="lan-state">подключение…</span>
+          </header>
+          <div class="user-body">
+            <img class="user-ava" id="lan-ava" alt="" hidden>
+            <div>
+              <div class="user-name">dendoroff</div>
+              <div class="user-activity" id="lan-activity">статус недоступен</div>
+            </div>
+            <span class="led" id="lan-led"></span>
+          </div>
+        </article>
+
+        <!-- STEAM -->
+        <article class="card w-steam reveal">
+          <header class="w-head">
+            <span class="w-title">steam --profile</span>
+            <span class="w-status" id="st-state">…</span>
+          </header>
+          <div class="user-body">
+            <img class="user-ava" id="st-ava" src="https://avatars.fastly.steamstatic.com/f66810876e9f494a073bcc92e568975f6882c1df_full.jpg" alt="Steam avatar">
+            <div>
+              <div class="user-name" id="st-name">ᴅᴇɴᴅᴏʀ</div>
+              <div class="user-activity" id="st-activity">загрузка профиля…</div>
+            </div>
+            <span class="led" id="st-led"></span>
+          </div>
+          <div class="w-actions">
+            <a class="btn" id="st-link" href="https://steamcommunity.com/id/DENDOR_YT" target="_blank" rel="noopener">профиль Steam</a>
+          </div>
+        </article>
+
+        <!-- TWITCH -->
+        <article class="card w-twitch reveal">
+          <header class="w-head">
+            <span class="w-title">twitch --live</span>
+            <span class="w-status" id="tw-state">проверка…</span>
+          </header>
+          <a class="tw-media" id="tw-media" href="https://www.twitch.tv/DENDORoff" target="_blank" rel="noopener">
+            <img id="tw-thumb" alt="Twitch preview" loading="lazy">
+            <span class="tw-live" id="tw-live" hidden>LIVE</span>
+          </a>
+          <div class="tw-title" id="tw-title">—</div>
+          <div class="tw-meta">
+            <span class="chip" id="tw-game">—</span>
+            <span class="chip" id="tw-viewers">0 зрителей</span>
+          </div>
+          <div class="w-actions">
+            <a class="btn btn-solid" href="https://www.twitch.tv/DENDORoff" target="_blank" rel="noopener">смотреть на Twitch</a>
+          </div>
+        </article>
+
+        <!-- CLOCK -->
+        <article class="card w-clock reveal">
+          <header class="w-head">
+            <span class="w-title">time --local</span>
+            <span class="w-status" id="clk-tz">—</span>
+          </header>
+          <div class="clock-time" id="clk-time">--:--:--</div>
+          <div class="clock-date" id="clk-date">—</div>
+          <div class="clock-bar"><span id="clk-bar-w"></span></div>
+        </article>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="counter-wrap">
+      <div class="counter-label">тысяч посещений:</div>
+      <img class="moe-counter" alt="счётчик посещений"
+           src="https://api.sefinek.net/api/v2/moecounter?name=dendoroff-github-io&theme=minecraft&length=8&pixelated=true">
+    </div>
+    <div class="footer-line">
+      <span>© 2026 DENDOR // dendor.deworld.su</span>
+      <span class="dim">счётчик — api.sefinek.net (сбор IP-адресов)</span>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
