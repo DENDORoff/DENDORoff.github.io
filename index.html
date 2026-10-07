@@ -103,6 +103,42 @@
 
       <div class="grid">
 
+        <!-- MUSIC PLAYER -->
+        <article class="card w-music reveal" id="pl-card">
+          <header class="w-head">
+            <span class="w-title">music --player</span>
+            <span class="w-status"><span class="led" id="pl-led"></span><span id="pl-state">загрузка…</span></span>
+          </header>
+          <div class="pl-main">
+            <div class="pl-cover">
+              <img id="pl-art" alt="" hidden>
+              <div class="pl-cover-ph" id="pl-ph">♪</div>
+              <div class="pl-badge" id="pl-num">—</div>
+            </div>
+            <div class="pl-info">
+              <div class="pl-title" id="pl-title">—</div>
+              <div class="pl-artist" id="pl-artist">читаю music/…</div>
+              <div class="pl-progress" id="pl-seek" tabindex="0" role="slider" aria-label="перемотка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="pl-fill" id="pl-fill"></div>
+                <div class="pl-knob" id="pl-knob"></div>
+              </div>
+              <div class="pl-times"><span id="pl-cur">0:00</span><span id="pl-dur">0:00</span></div>
+              <div class="pl-controls">
+                <button class="pl-btn" id="pl-prev" type="button" aria-label="предыдущий трек">|&lt;</button>
+                <button class="pl-btn pl-btn-play" id="pl-play" type="button" aria-label="воспроизвести">&gt;</button>
+                <button class="pl-btn" id="pl-next" type="button" aria-label="следующий трек">&gt;|</button>
+                <div class="pl-vol">
+                  <button class="pl-vol-btn" id="pl-mute" type="button" aria-label="выключить звук">vol</button>
+                  <input type="range" class="pl-range" id="pl-range" min="0" max="100" value="80" aria-label="громкость">
+                </div>
+                <span class="pl-count" id="pl-count"></span>
+              </div>
+            </div>
+          </div>
+          <canvas id="pl-viz" class="pl-viz" height="72" aria-hidden="true"></canvas>
+          <ol class="pl-list" id="pl-list"></ol>
+        </article>
+
         <!-- MINECRAFT -->
         <article class="card w-mc reveal">
           <header class="w-head">
@@ -294,5 +330,6 @@
 
   <script src="js/config.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/player.js"></script>
 </body>
 </html>

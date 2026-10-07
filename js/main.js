@@ -121,7 +121,8 @@
     const frame = (ts) => {
       requestAnimationFrame(frame);
       if (document.hidden) return;
-      if (ts - last < 42) return;
+      const beat = (window.MUSIC && window.MUSIC.pulse) || 0;
+      if (ts - last < 42 - beat * 18) return;
       last = ts;
       ctx.fillStyle = "rgba(5, 6, 8, 0.09)";
       ctx.fillRect(0, 0, c.width, c.height);

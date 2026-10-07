@@ -51,6 +51,15 @@ const CONFIG = {
     refreshMs: 60000,
   },
 
+  music: {
+    dir: "music",
+    repo: "DENDORoff/DENDORoff.github.io",
+    volume: 80,
+    // Ручной плейлист (строки "music/track.mp3" или {file,title,artist}).
+    // Пусто → плеер сам сканирует папку music/ через GitHub API.
+    tracks: [],
+  },
+
   counter: {
     name: "dendoroff-github-io",
     theme: "minecraft",
