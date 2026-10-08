@@ -39,6 +39,13 @@
       <a href="#projects">projects</a>
       <a href="#widgets">widgets</a>
     </nav>
+    <div class="mini" id="mini" hidden>
+      <button class="mini-btn" id="mini-prev" type="button" aria-label="предыдущий трек">|&lt;</button>
+      <button class="mini-btn mini-play" id="mini-play" type="button" aria-label="воспроизвести">&gt;</button>
+      <button class="mini-btn" id="mini-next" type="button" aria-label="следующий трек">&gt;|</button>
+      <span class="mini-title" id="mini-title">—</span>
+    </div>
+    <div class="mini-progress" id="mini-progress" hidden><span id="mini-prog"></span></div>
     <div class="topclock" id="topclock">--:--:--</div>
   </header>
 
@@ -64,6 +71,28 @@
         <a class="btn btn-solid" href="#widgets">./widgets --live</a>
         <a class="btn" href="https://t.me/tg_dendor" target="_blank" rel="noopener">telegram</a>
         <a class="btn" href="https://discord.deworld.su" target="_blank" rel="noopener">discord</a>
+      </div>
+    </section>
+
+    <!-- LIVE (Twitch) — показывается только во время эфира -->
+    <section id="live" class="sec live-sec" hidden>
+      <div class="live-grid">
+        <div class="live-copy">
+          <div class="live-tag"><span class="led led-live"></span>live // прямо сейчас</div>
+          <h2 class="sec-title" data-text="twitch --live">twitch --live</h2>
+          <div class="live-title" id="live-title">—</div>
+          <div class="live-meta">
+            <span class="chip" id="live-game">—</span>
+            <span class="chip" id="live-viewers">0 зрителей</span>
+          </div>
+          <p class="live-desc">идёт прямой эфир — подключайся, пока он не закончился.</p>
+          <div class="w-actions">
+            <a class="btn btn-solid" id="live-link" href="https://www.twitch.tv/DENDORoff" target="_blank" rel="noopener">смотреть на twitch</a>
+          </div>
+        </div>
+        <div class="live-player">
+          <iframe id="live-frame" title="Twitch live player" allowfullscreen scrolling="no" loading="lazy"></iframe>
+        </div>
       </div>
     </section>
 
@@ -252,7 +281,10 @@
             <span class="w-status" id="lan-state">подключение…</span>
           </header>
           <div class="user-body">
-            <img class="user-ava" id="lan-ava" alt="" hidden>
+            <span class="ava-wrap">
+              <img class="user-ava" id="lan-ava" alt="" hidden>
+              <img class="ava-deco" id="lan-deco" alt="" hidden>
+            </span>
             <div>
               <div class="user-name">dendoroff</div>
               <div class="user-activity" id="lan-activity">статус недоступен</div>
@@ -320,11 +352,10 @@
     <div class="counter-wrap">
       <div class="counter-label">тысяч посещений:</div>
       <img class="moe-counter" alt="счётчик посещений"
-           src="https://api.sefinek.net/api/v2/moecounter?name=dendoroff-github-io&theme=minecraft&length=8&pixelated=true">
+           src="https://count.getloli.com/@DENDORoff?theme=rule34">
     </div>
     <div class="footer-line">
       <span>© 2026 DENDOR // dendor.deworld.su</span>
-      <span class="dim">счётчик — api.sefinek.net (сбор IP-адресов)</span>
     </div>
   </footer>
 

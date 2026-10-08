@@ -190,8 +190,8 @@
   function fromName(name) {
     const base = name.replace(/\.[^.]+$/, "").replace(/_/g, " ").trim();
     const m = base.split(" - ");
-    if (m.length >= 2 && m[0].trim()) {
-      return { artist: m[0].trim(), title: m.slice(1).join(" - ").trim() };
+    if (m.length >= 2 && m[1] && m.slice(1).join(" - ").trim()) {
+      return { title: m[0].trim(), artist: m.slice(1).join(" - ").trim() };
     }
     return { artist: "", title: base };
   }
@@ -285,6 +285,9 @@
       prev: $("#pl-prev"), play: $("#pl-play"), next: $("#pl-next"),
       mute: $("#pl-mute"), range: $("#pl-range"), count: $("#pl-count"),
       viz: $("#pl-viz"), list: $("#pl-list"),
+      mini: $("#mini"), miniPrev: $("#mini-prev"), miniPlay: $("#mini-play"),
+      miniNext: $("#mini-next"), miniTitle: $("#mini-title"),
+      miniProgBox: $("#mini-progress"), miniProg: $("#mini-prog"),
     };
 
     const audio = new Audio();
@@ -326,6 +329,10 @@
         else { ui.art.hidden = true; if (ui.ph) ui.ph.hidden = false; }
       }
       $$(".pl-item", ui.list).forEach((n, i) => n.classList.toggle("on", i === cur));
+      if (ui.miniTitle) {
+        ui.miniTitle.textContent = label(t);
+        ui.miniTitle.title = label(t);
+      }
       mediaSession(t);
     }
 
@@ -423,6 +430,7 @@
       window.MUSIC.playing = true;
       if (ui.play) ui.play.textContent = "||";
       if (ui.play) ui.play.setAttribute("aria-label", "пауза");
+      if (ui.miniPlay) { ui.miniPlay.textContent = "||"; ui.miniPlay.setAttribute("aria-label", "пауза"); }
       setState("led-on", "играет");
       if (ui.viz && !viz.raf && !reduced) drawLoop();
     });
@@ -431,6 +439,7 @@
       window.MUSIC.playing = false;
       if (ui.play) ui.play.textContent = ">";
       if (ui.play) ui.play.setAttribute("aria-label", "воспроизвести");
+      if (ui.miniPlay) { ui.miniPlay.textContent = ">"; ui.miniPlay.setAttribute("aria-label", "воспроизвести"); }
       setState("led-blink", "пауза");
     });
 
@@ -449,6 +458,7 @@
       if (ui.knob) ui.knob.style.left = pct + "%";
       if (ui.cur) ui.cur.textContent = fmtTime(audio.currentTime);
       if (ui.seek) ui.seek.setAttribute("aria-valuenow", String(Math.round(pct)));
+      if (ui.miniProg) ui.miniProg.style.width = pct + "%";
     });
 
     audio.addEventListener("error", () => {
@@ -460,6 +470,24 @@
     if (ui.play) ui.play.addEventListener("click", toggle);
     if (ui.next) ui.next.addEventListener("click", nextTrack);
     if (ui.prev) ui.prev.addEventListener("click", prevTrack);
+    if (ui.miniPlay) ui.miniPlay.addEventListener("click", toggle);
+    if (ui.miniNext) ui.miniNext.addEventListener("click", nextTrack);
+    if (ui.miniPrev) ui.miniPrev.addEventListener("click", prevTrack);
+
+    /* --- space = play/pause --- */
+    document.addEventListener("keydown", (ev) => {
+      if (ev.code !== "Space" && ev.key !== " ") return;
+      if (document.body.classList.contains("booting")) return;
+      const t = ev.target;
+      if (t) {
+        const tag = (t.tagName || "").toLowerCase();
+        if (tag === "input" || tag === "textarea" || tag === "select" ||
+            tag === "button" || tag === "a" || t.isContentEditable) return;
+        if (t.closest && t.closest(".pl-item")) return;
+      }
+      ev.preventDefault();
+      toggle();
+    });
 
     if (ui.range) {
       ui.range.addEventListener("input", () => {
@@ -669,6 +697,8 @@
       if (ui.play) ui.play.textContent = ">";
       tracks = await discover();
       if (!tracks.length) { emptyState(); if (reduced) drawStatic(); return; }
+      if (ui.mini) ui.mini.hidden = false;
+      if (ui.miniProgBox) ui.miniProgBox.hidden = false;
       renderList();
       load(0, false);
       setState("led-blink", "нажми ▶");

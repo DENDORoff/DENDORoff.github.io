@@ -490,41 +490,97 @@
   }
 
   /* ============================================================
-     DISCORD — personal status (Lanyard)
+     DISCORD — personal card (Lanyard → guild widget fallback)
      ============================================================ */
-  async function lanyard() {
+  function renderEmoji(s) {
+    return esc(s).replace(
+      /&lt;(a?):([A-Za-z0-9_]{1,60}):(\d{5,30})&gt;/g,
+      (m, anim, name, id) =>
+        `<img class="dsc-emoji" src="https://cdn.discordapp.com/emojis/${id}.${anim ? "gif" : "png"}?quality=lossless" alt=":${name}:" title=":${name}:">`
+    );
+  }
+
+  function statusEmoji(e) {
+    if (!e) return "";
+    if (e.id) {
+      return `<img class="dsc-emoji" src="https://cdn.discordapp.com/emojis/${e.id}.${e.animated ? "gif" : "png"}?quality=lossless" alt="" title="${esc(e.name || "")}">`;
+    }
+    return esc(e.name || "");
+  }
+
+  function setDeco(img, uid, asset) {
+    let tried = false;
+    img.onload = () => { img.hidden = false; };
+    img.onerror = () => {
+      if (!tried) {
+        tried = true;
+        img.src = "https://cdn.discordapp.com/avatar-decoration-presets/" + asset + ".png";
+      } else img.hidden = true;
+    };
+    img.src = "https://cdn.discordapp.com/avatar-decorations/" + encodeURIComponent(uid) + "/" + asset + ".png";
+  }
+
+  async function discordCard() {
     const stateEl = $("#lan-state");
     const led = $("#lan-led");
     const act = $("#lan-activity");
     const ava = $("#lan-ava");
+    const deco = $("#lan-deco");
     const map = {
       online: ["в сети", "led-on"],
       idle: ["ожидание", "led-blink"],
       dnd: ["не беспокоить", "led-off"],
       invisible: ["скрыт", ""],
+      offline: ["офлайн", "led-off"],
     };
+    const widgetName = CONFIG.discord.widgetName || CONFIG.discord.tag;
+    const bio = renderEmoji(CONFIG.discord.bio || CONFIG.profile.bio);
+
+    /* 1) Lanyard — живые данные: аним. аватар, рамка, активности */
     try {
       const j = await getJSON(`https://api.lanyard.rest/v1/users/${CONFIG.discord.user}`, { timeout: 8000 });
-      if (!j || !j.success) throw new Error("no data");
+      if (!j || !j.success || !j.data) throw new Error("no data");
       const d = j.data;
+      const du = d.discord_user || {};
       const [label, ledCls] = map[d.discord_status] || ["—", ""];
       if (stateEl) stateEl.textContent = label;
-      led.className = "led " + ledCls;
+      if (led) led.className = "led " + ledCls;
 
-      const sp = d.spotify;
-      const game = (d.activities || []).find((a) => a.type !== 0 && a.type !== 3);
-      if (sp && sp.track) act.textContent = `♪ ${sp.artist_name} — ${sp.track}`;
-      else if (game) act.textContent = game.details || game.name;
-      else act.textContent = label;
-
-      if (d.discord_user && d.discord_user.avatar && ava) {
-        ava.src = `https://cdn.discordapp.com/avatars/${d.discord_user.id}/${d.discord_user.avatar}.png?size=64`;
+      if (du.avatar && ava) {
+        const ext = du.avatar.indexOf("a_") === 0 ? "gif" : "png";
+        ava.src = `https://cdn.discordapp.com/avatars/${du.id}/${du.avatar}.${ext}?size=128`;
         ava.hidden = false;
       }
-    } catch (e) {
+      if (deco && du.avatar_decoration_data && du.avatar_decoration_data.asset) {
+        setDeco(deco, du.id, du.avatar_decoration_data.asset);
+      }
+
+      const custom = (d.activities || []).find((a) => a.type === 4 && (a.state || a.name));
+      const game = (d.activities || []).find((a) => a.type !== 4 && a.type !== 3 && (a.name || a.details));
+      let html = "";
+      if (custom) html = statusEmoji(custom.emoji) + (custom.state ? (statusEmoji(custom.emoji) ? " " : "") + renderEmoji(custom.state) : renderEmoji(custom.name || ""));
+      else if (d.listening_to_spotify && d.spotify) html = `♪ ${esc(d.spotify.artist_name || d.spotify.artist)} — ${esc(d.spotify.track)}`;
+      else if (game) html = renderEmoji(game.name || "") + (game.details ? " — " + renderEmoji(game.details) : "");
+      else html = bio;
+      if (act) act.innerHTML = html || bio;
+      return;
+    } catch (e) { /* нет Lanyard → widget ниже */ }
+
+    /* 2) Guild widget — статик-аватар + presence + био */
+    try {
+      const w = await getJSON(`https://discord.com/api/guilds/${CONFIG.discord.guild}/widget.json`, { timeout: 9000 });
+      const m = (w.members || []).find(
+        (x) => String(x.username || "").toLowerCase() === String(widgetName || "").toLowerCase()
+      );
+      const [label, ledCls] = map[(m && m.status) || "offline"] || ["н/д", ""];
+      if (stateEl) stateEl.textContent = label;
+      if (led) led.className = "led " + ledCls;
+      if (m && m.avatar_url && ava) { ava.src = m.avatar_url; ava.hidden = false; }
+      if (act) act.innerHTML = bio;
+    } catch (e2) {
       if (stateEl) stateEl.textContent = "н/д";
-      led.className = "led";
-      if (act) act.textContent = "статус скрыт — открой discord.deworld.su";
+      if (led) led.className = "led";
+      if (act) act.innerHTML = bio;
     }
   }
 
@@ -631,13 +687,41 @@
   }
 
   /* ============================================================
-     TWITCH — live status
+     TWITCH — live status + hero player
      ============================================================ */
+  function showLive(s, login, url) {
+    const sec = $("#live");
+    if (!sec) return;
+    const t = $("#live-title");
+    if (t) t.textContent = s.title || "—";
+    const g = $("#live-game");
+    if (g) g.textContent = (s.game && s.game.displayName) || "—";
+    const v = $("#live-viewers");
+    if (v) v.textContent = (s.viewersCount || 0).toLocaleString("ru-RU") + " зрителей";
+    const a = $("#live-link");
+    if (a) a.href = url;
+    const f = $("#live-frame");
+    if (f) {
+      const src =
+        "https://player.twitch.tv/?channel=" + encodeURIComponent(login) +
+        "&parent=" + encodeURIComponent(location.hostname) +
+        "&muted=true&autoplay=true";
+      if (f.dataset.src !== src) { f.dataset.src = src; f.src = src; }
+    }
+    sec.hidden = false;
+  }
+
+  function hideLive() {
+    const sec = $("#live");
+    if (sec) sec.hidden = true;
+  }
+
   async function twitch() {
     const { login, url, clientId } = CONFIG.twitch;
     const state = $("#tw-state");
     const thumb = $("#tw-thumb");
     const liveBadge = $("#tw-live");
+    hideLive();
     thumb.src = `https://static-cdn.jtvnw.net/previews-ttv/live_user_${login}-440x248.jpg`;
     $("#tw-media").href = url;
     $("#tw-title").textContent = "проверяем, в эфире ли канал…";
@@ -664,6 +748,7 @@
         $("#tw-title").textContent = s.title || "—";
         $("#tw-game").textContent = (s.game && s.game.displayName) || "—";
         $("#tw-viewers").textContent = `${s.viewersCount} зрителей`;
+        showLive(s, login, url);
       } else {
         liveBadge.hidden = true;
         state.textContent = "offline";
@@ -786,7 +871,7 @@
   ghGraph();
   randomRepo();
   discordServer();
-  lanyard();
+  discordCard();
   minecraft();
   steam();
   twitch();

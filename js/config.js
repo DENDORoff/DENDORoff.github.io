@@ -24,6 +24,12 @@ const CONFIG = {
     user: "1470170052274815171",
     guild: "867681876231979028",
     serverUrl: "https://discord.deworld.su",
+    // Имя в guild widget.json (для поиска твоего аватара/статуса)
+    widgetName: "DENDOR",
+    // Описание профиля Discord (если активного статуса нет).
+    // Поддерживает <a:name:id> / <:name:id> — нарисуются как эмодзи.
+    // Пусто → берётся profile.bio.
+    bio: "",
   },
 
   steam: {
