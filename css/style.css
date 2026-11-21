@@ -1434,7 +1434,7 @@ input[type="range"].pl-range::-moz-range-thumb {
 
 .fx-particles[hidden], .fx-sparks[hidden] { display: none; }
 
-.fx-cursor {
+#fx-cursor {
   position: fixed;
   left: 0;
   top: 0;
@@ -1449,9 +1449,9 @@ input[type="range"].pl-range::-moz-range-thumb {
   transition: opacity 0.2s ease, width 0.18s ease, height 0.18s ease, border-color 0.18s ease;
   box-shadow: 0 0 calc(6px + 14px * var(--pulse)) rgba(57, 255, 136, calc(0.25 + 0.35 * var(--pulse)));
 }
-.fx-cursor.on { opacity: 1; }
-.fx-cursor.hot { width: 40px; height: 40px; border-color: var(--cyan); }
-.fx-cursor span {
+#fx-cursor.on { opacity: 1; }
+#fx-cursor.hot { width: 40px; height: 40px; border-color: var(--cyan); }
+#fx-cursor span {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -1463,12 +1463,12 @@ input[type="range"].pl-range::-moz-range-thumb {
 }
 
 @media (pointer: fine) {
-  body.fx-cursor, body.fx-cursor * { cursor: none !important; }
-  body.fx-cursor input, body.fx-cursor textarea,
-  body.fx-cursor [contenteditable="true"] { cursor: text !important; }
+  body.fx-no-native-cursor, body.fx-no-native-cursor * { cursor: none !important; }
+  body.fx-no-native-cursor input, body.fx-no-native-cursor textarea,
+  body.fx-no-native-cursor [contenteditable="true"] { cursor: text !important; }
 }
 @media (pointer: coarse) {
-  .fx-cursor, .fx-particles { display: none; }
+  #fx-cursor, .fx-particles { display: none; }
 }
 
 /* ---------- compact cards: expand in viewport ---------- */
@@ -1476,7 +1476,7 @@ input[type="range"].pl-range::-moz-range-thumb {
 .card:not(.in-view) { opacity: 0.62; transform: scale(0.985); }
 .card.in-view { opacity: 1; transform: none; }
 .card.in-view:hover { transform: translateY(-3px); }
-.fx-music .card.in-view {
+.fx-flag-music .card.in-view {
   box-shadow: 0 0 calc(3px + 10px * var(--pulse)) rgba(57, 255, 136, calc(0.03 + 0.12 * var(--pulse)));
 }
 
@@ -1540,7 +1540,7 @@ input[type="range"].pl-range::-moz-range-thumb {
   .cursor, .sec-title::after, .boot-hint, .led-blink, .led-live, .tw-live, .pl-cover-ph, .skel { animation: none; }
   html { scroll-behavior: auto; }
   .reveal { opacity: 1; transform: none; transition: none; }
-  .fx-cursor, .fx-particles { display: none; }
+  #fx-cursor, .fx-particles { display: none; }
   .card:not(.in-view) { opacity: 1; transform: none; }
   .card, .card:hover { transition: none; transform: none; }
 }

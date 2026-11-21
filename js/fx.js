@@ -34,8 +34,8 @@
   const cursor = $("#fx-cursor");
 
   function applyOpts() {
-    Object.keys(opts).forEach((k) => body.classList.toggle("fx-" + k, opts[k]));
-    body.classList.toggle("fx-cursor", opts.particles && fine);
+    Object.keys(opts).forEach((k) => body.classList.toggle("fx-flag-" + k, opts[k]));
+    body.classList.toggle("fx-no-native-cursor", opts.particles && fine);
     if (pcanvas) pcanvas.hidden = !opts.particles;
     if (scanvas) scanvas.hidden = !opts.particles;
     if (cursor && !opts.particles) cursor.classList.remove("on");
