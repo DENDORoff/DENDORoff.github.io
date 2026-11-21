@@ -11,7 +11,7 @@ const CONFIG = {
     bio:
       "DENDOR — разработчик и основатель DeWorld. Делаю Minecraft-плагины, " +
       "развиваю серверы и YouTube-канал. Пишу код, музыку и иногда видосы.",
-    site: "https://deworld.su",
+    site: "https://de-world.net",
   },
 
   github: {
@@ -23,7 +23,7 @@ const CONFIG = {
     tag: "dendoroff",
     user: "1470170052274815171",
     guild: "867681876231979028",
-    serverUrl: "https://discord.deworld.su",
+    serverUrl: "https://discord.de-world.net",
     // Имя в guild widget.json (для поиска твоего аватара/статуса)
     widgetName: "DENDOR",
     // Описание профиля Discord (если активного статуса нет).
@@ -49,11 +49,11 @@ const CONFIG = {
   youtube: {
     channelId: "UCnPHpCrXyRREynAUPcYnqqA",
     handle: "@deworld_ru",
-    url: "https://youtube.deworld.su",
+    url: "https://youtube.de-world.net",
   },
 
   minecraft: {
-    host: "mc.deworld.su",
+    host: "mc.de-world.net",
     refreshMs: 60000,
   },
 
@@ -77,21 +77,22 @@ const CONFIG = {
     { name: "Telegram канал", sub: "@deworld_ru", url: "https://t.me/deworld_ru", icon: "telegram" },
     { name: "ВКонтакте", sub: "vk_dendor", url: "https://vk.com/vk_dendor", icon: "vk" },
     { name: "ВКонтакте паблик", sub: "@deworld_ru", url: "https://vk.com/deworld_ru", icon: "vk" },
-    { name: "Discord", sub: "dendoroff", url: "https://discord.deworld.su", icon: "discord" },
-    { name: "YouTube", sub: "@deworld_ru", url: "https://youtube.deworld.su", icon: "youtube" },
+    { name: "Discord", sub: "dendoroff", url: "https://discord.de-world.net", icon: "discord" },
+    { name: "YouTube", sub: "@deworld_ru", url: "https://youtube.de-world.net", icon: "youtube" },
     { name: "Twitch", sub: "DENDORoff", url: "https://www.twitch.tv/DENDORoff", icon: "twitch" },
     { name: "Steam", sub: "DENDOR_YT", url: "https://steamcommunity.com/id/DENDOR_YT", icon: "steam" },
     { name: "GitHub", sub: "DENDORoff", url: "https://github.com/DENDORoff", icon: "github" },
-    { name: "Сайт", sub: "deworld.su", url: "https://deworld.su", icon: "website" },
+    { name: "Сайт", sub: "de-world.net", url: "https://de-world.net", icon: "website" },
   ],
 
-  skills: [
-    { label: "Java", level: 90 },
-    { label: "Spigot / Paper / Bukkit", level: 95 },
-    { label: "JavaScript / HTML / CSS", level: 80 },
-    { label: "Администрирование серверов", level: 85 },
-    { label: "Видео / стриминг", level: 75 },
-    { label: "Музыка для игр", level: 70 },
+  // Навыки по категориям — как на lume.su/dendor
+  skillGroups: [
+    { name: "Языки", items: ["Python", "PHP", "HTML", "CSS", "JavaScript", "Java"] },
+    { name: "Веб и приложения", items: ["Node.js"] },
+    { name: "Серверы и данные", items: ["GitHub", "MySQL", "Cloudflare", "Git", "Docker"] },
+    { name: "Дизайн", items: ["Canva"] },
+    { name: "Видео и аудио", items: ["OBS Studio", "FL Studio"] },
+    { name: "Ещё", items: ["Minecraft plugins", "Minecraft servers"] },
   ],
 
   projects: [
@@ -100,9 +101,9 @@ const CONFIG = {
       desc:
         "Сеть Minecraft серверов с собственной экосистемой: прокси, " +
         "плагины, монетизация. Заходи — серверы онлайн.",
-      link: "https://deworld.su",
-      btn: "deworld.su",
-      chips: ["mc.deworld.su", "Velocity", "custom plugins"],
+      link: "https://de-world.net",
+      btn: "de-world.net",
+      chips: ["mc.de-world.net", "Velocity", "custom plugins"],
       icon: "website",
     },
     {
@@ -120,7 +121,7 @@ const CONFIG = {
       desc:
         "Геймплей, шорты и highlight'ы: DOOM Eternal, Forza Horizon " +
         "и другие игры. Подписывайся.",
-      link: "https://youtube.deworld.su",
+      link: "https://youtube.de-world.net",
       btn: "@deworld_ru",
       chips: ["shorts", "геймплей", "highlight'ы"],
       icon: "youtube",
@@ -149,7 +150,7 @@ const CONFIG = {
     "[    0.014] mounting /dev/deworld ............... OK",
     "[    0.037] loading dendor.core ................. OK",
     "[    0.061] syncing github / discord / steam .... OK",
-    "[    0.088] ping mc.deworld.su ............... 21ms",
+    "[    0.088] ping mc.de-world.net ............... 21ms",
     "[    0.113] ACCESS GRANTED — welcome, guest_",
   ],
 };

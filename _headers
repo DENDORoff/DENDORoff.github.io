@@ -1,0 +1,7 @@
+# Per-host headers. NOTE: GitHub Pages ignores this file; it is kept for
+# hosts that support _headers (Cloudflare Pages / Netlify) if the site moves.
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

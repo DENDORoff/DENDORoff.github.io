@@ -9,13 +9,17 @@
   <meta property="og:title" content="DENDOR — bio // DeWorld dev">
   <meta property="og:description" content="Minecraft-плагины, серверы, код и немного магии.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://dendor.deworld.su">
+  <meta property="og:url" content="https://dendor.de-world.net">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="preload" href="fonts/JetBrainsMono-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23050608'/><text x='2' y='12' font-family='monospace' font-size='11' fill='%2339ff88'>D_</text></svg>">
+  <script>
+    /* frame-buster: GitHub Pages не отдаёт X-Frame-Options */
+    try { if (window.top !== window.self) window.top.location = window.self.location; } catch (e) {}
+  </script>
 </head>
 <body>
 
@@ -27,8 +31,11 @@
 
   <!-- BACKDROPS -->
   <canvas id="matrix" class="matrix" aria-hidden="true"></canvas>
+  <canvas id="fx-particles" class="fx-particles" aria-hidden="true"></canvas>
+  <canvas id="fx-sparks" class="fx-sparks" aria-hidden="true"></canvas>
   <div class="scanlines" aria-hidden="true"></div>
   <div class="vignette" aria-hidden="true"></div>
+  <div id="fx-cursor" class="fx-cursor" aria-hidden="true"><span></span></div>
 
   <!-- TOPBAR -->
   <header class="topbar">
@@ -46,6 +53,20 @@
       <span class="mini-title" id="mini-title">—</span>
     </div>
     <div class="mini-progress" id="mini-progress" hidden><span id="mini-prog"></span></div>
+
+    <!-- FX settings: dropdown (>2 options, dismissible by swipe/Esc/outside) -->
+    <div class="fx-menu" id="fx-menu">
+      <button class="fx-trigger" id="fx-trigger" type="button" aria-expanded="false" aria-controls="fx-panel" aria-label="настройки эффектов">⚙<span class="fx-trigger-label">fx</span></button>
+      <div class="fx-panel" id="fx-panel" hidden role="group" aria-label="настройки эффектов">
+        <div class="fx-panel-title">// настройки эффектов</div>
+        <label class="fx-row"><span>инерция прокрутки</span><input type="checkbox" data-fx="inertia" checked></label>
+        <label class="fx-row"><span>автоскролл при бездействии</span><input type="checkbox" data-fx="auto" checked></label>
+        <label class="fx-row"><span>частицы и курсор</span><input type="checkbox" data-fx="particles" checked></label>
+        <label class="fx-row"><span>реакция на музыку</span><input type="checkbox" data-fx="music" checked></label>
+        <div class="fx-hint">смахни вниз, нажми Esc или кликни вне — закроется</div>
+      </div>
+    </div>
+
     <div class="topclock" id="topclock">--:--:--</div>
   </header>
 
@@ -70,7 +91,7 @@
       <div class="hero-btns reveal">
         <a class="btn btn-solid" href="#widgets">./widgets --live</a>
         <a class="btn" href="https://t.me/tg_dendor" target="_blank" rel="noopener">telegram</a>
-        <a class="btn" href="https://discord.deworld.su" target="_blank" rel="noopener">discord</a>
+        <a class="btn" href="https://discord.de-world.net" target="_blank" rel="noopener">discord</a>
       </div>
     </section>
 
@@ -91,7 +112,8 @@
           </div>
         </div>
         <div class="live-player">
-          <iframe id="live-frame" title="Twitch live player" allowfullscreen scrolling="no" loading="lazy"></iframe>
+          <iframe id="live-frame" title="Twitch live player" allowfullscreen scrolling="no" loading="lazy"
+                  allow="autoplay; fullscreen; picture-in-picture"></iframe>
         </div>
       </div>
     </section>
@@ -105,7 +127,7 @@
           <div class="about-facts">
             <div class="fact"><span class="fact-k">location</span><span class="fact-v">Earth / internet</span></div>
             <div class="fact"><span class="fact-k">status</span><span class="fact-v"><span class="led led-on"></span> open for projects</span></div>
-            <div class="fact"><span class="fact-k">site</span><a class="fact-v link" href="https://deworld.su" target="_blank" rel="noopener">deworld.su</a></div>
+            <div class="fact"><span class="fact-k">site</span><a class="fact-v link" href="https://de-world.net" target="_blank" rel="noopener">de-world.net</a></div>
           </div>
         </div>
         <div class="contacts" id="contacts"><!-- social cards (JS) --></div>
@@ -116,7 +138,7 @@
     <section id="skills" class="sec">
       <h2 class="sec-title" data-text="skills --list">skills --list</h2>
       <div class="card reveal">
-        <div class="skills" id="skills-list"><!-- bars (JS) --></div>
+        <div class="skills" id="skills-list"><!-- groups (JS) --></div>
       </div>
     </section>
 
@@ -146,7 +168,7 @@
             </div>
             <div class="pl-info">
               <div class="pl-title" id="pl-title">—</div>
-              <div class="pl-artist" id="pl-artist">читаю music/…</div>
+              <div class="pl-artist skel" id="pl-artist">читаю music/…</div>
               <div class="pl-progress" id="pl-seek" tabindex="0" role="slider" aria-label="перемотка" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                 <div class="pl-fill" id="pl-fill"></div>
                 <div class="pl-knob" id="pl-knob"></div>
@@ -177,8 +199,8 @@
           <div class="mc-body">
             <img class="mc-icon" id="mc-icon" alt="" hidden>
             <div class="mc-main">
-              <div class="mc-addr" id="mc-addr">mc.deworld.su</div>
-              <pre class="mc-motd" id="mc-motd">loading…</pre>
+              <div class="mc-addr" id="mc-addr">mc.de-world.net</div>
+              <pre class="mc-motd skel" id="mc-motd">загрузка…</pre>
             </div>
           </div>
           <div class="mc-stats">
@@ -197,7 +219,7 @@
         <article class="card w-yt reveal">
           <header class="w-head">
             <span class="w-title">youtube --latest</span>
-            <span class="w-status" id="yt-count">загрузка…</span>
+            <span class="w-status skel" id="yt-count">загрузка…</span>
           </header>
           <div class="yt-carousel">
             <div class="yt-track" id="yt-track"></div>
@@ -270,12 +292,12 @@
           <div class="dsc-name" id="dsc-name">DEWORLD</div>
           <div class="dsc-members" id="dsc-members"></div>
           <div class="w-actions">
-            <a class="btn btn-solid" id="dsc-invite" href="https://discord.deworld.su" target="_blank" rel="noopener">войти на сервер</a>
+            <a class="btn btn-solid" id="dsc-invite" href="https://discord.de-world.net" target="_blank" rel="noopener">войти на сервер</a>
           </div>
         </article>
 
         <!-- DISCORD USER (Lanyard) -->
-        <article class="card w-user reveal">
+        <article class="card soft w-user reveal">
           <header class="w-head">
             <span class="w-title">discord --me</span>
             <span class="w-status" id="lan-state">подключение…</span>
@@ -294,7 +316,7 @@
         </article>
 
         <!-- STEAM -->
-        <article class="card w-steam reveal">
+        <article class="card soft w-steam reveal">
           <header class="w-head">
             <span class="w-title">steam --profile</span>
             <span class="w-status" id="st-state">…</span>
@@ -322,7 +344,7 @@
             <img id="tw-thumb" alt="Twitch preview" loading="lazy">
             <span class="tw-live" id="tw-live" hidden>LIVE</span>
           </a>
-          <div class="tw-title" id="tw-title">—</div>
+          <div class="tw-title skel" id="tw-title">проверяем эфир…</div>
           <div class="tw-meta">
             <span class="chip" id="tw-game">—</span>
             <span class="chip" id="tw-viewers">0 зрителей</span>
@@ -333,7 +355,7 @@
         </article>
 
         <!-- CLOCK -->
-        <article class="card w-clock reveal">
+        <article class="card soft w-clock reveal">
           <header class="w-head">
             <span class="w-title">time --local</span>
             <span class="w-status" id="clk-tz">—</span>
@@ -355,12 +377,13 @@
            src="https://count.getloli.com/@DENDORoff?theme=rule34">
     </div>
     <div class="footer-line">
-      <span>© 2026 DENDOR // dendor.deworld.su</span>
+      <span>© 2026 DENDOR // dendor.de-world.net</span>
     </div>
   </footer>
 
   <script src="js/config.js"></script>
   <script src="js/main.js"></script>
   <script src="js/player.js"></script>
+  <script src="js/fx.js"></script>
 </body>
 </html>

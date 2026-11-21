@@ -321,7 +321,10 @@
       const t = tracks[cur];
       if (!t) return;
       if (ui.title) ui.title.textContent = t.title || fromName(t.name).title;
-      if (ui.artist) ui.artist.textContent = t.artist || "без тегов (файл: " + t.name + ")";
+      if (ui.artist) {
+        ui.artist.textContent = t.artist || "без тегов (файл: " + t.name + ")";
+        ui.artist.classList.remove("skel");
+      }
       if (ui.num) ui.num.textContent = (cur + 1) + "/" + tracks.length;
       if (ui.count) ui.count.textContent = tracks.length + " трек.";
       if (ui.art) {
@@ -463,7 +466,7 @@
 
     audio.addEventListener("error", () => {
       if (!audio.src) return;
-      setState("led-off", "ошибка файла");
+      setState("led-off", "трек не загрузился — выбери другой");
     });
 
     /* --- controls --- */
@@ -686,7 +689,10 @@
            ============================================================ */
     function emptyState() {
       if (ui.title) ui.title.textContent = "в папке " + DIR + "/ пока нет треков";
-      if (ui.artist) ui.artist.textContent = "закинь .mp3 сюда: GitHub → репозиторий → Add file → Upload files";
+      if (ui.artist) {
+        ui.artist.textContent = "закинь .mp3 сюда: GitHub → репозиторий → Add file → Upload files";
+        ui.artist.classList.remove("skel");
+      }
       if (ui.count) ui.count.textContent = "0 трек.";
       setState(apiFailed ? "" : "led-off", apiFailed ? "н/д (api)" : "0 треков");
       [ui.play, ui.next, ui.prev].forEach((b) => { if (b) b.disabled = true; });

@@ -13,6 +13,9 @@
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
     }[c]));
 
+  /* скелетон → данные */
+  const ready = (el) => { if (el) el.classList.remove("skel"); };
+
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   async function getJSON(url, { headers = {}, timeout = 12000, method = "GET", body } = {}) {
@@ -249,27 +252,18 @@
       }).join("");
     }
 
-    /* skills */
+    /* skills — categories */
     const sk = $("#skills-list");
     if (sk) {
-      sk.innerHTML = CONFIG.skills.map((s) => `
-        <div class="skill" data-level="${s.level}">
-          <div class="skill-top">
-            <span class="skill-name">${esc(s.label)}</span>
-            <span class="skill-lvl">${s.level}%</span>
+      const groups = CONFIG.skillGroups || [];
+      sk.innerHTML = groups.map((g, i) => `
+        <div class="skill-group">
+          <div class="sg-head">
+            <span class="sg-num">${String(i + 1).padStart(2, "0")}</span>
+            <span class="sg-name">${esc(g.name)}</span>
           </div>
-          <div class="skill-track"><div class="skill-fill"></div></div>
+          <div class="sg-items">${g.items.map((it) => `<span class="sg-item">${esc(it)}</span>`).join("")}</div>
         </div>`).join("");
-
-      const sio = new IntersectionObserver((entries) => {
-        for (const e of entries) {
-          if (!e.isIntersecting) continue;
-          sio.unobserve(e.target);
-          const fill = $(".skill-fill", e.target);
-          setTimeout(() => { fill.style.width = e.target.dataset.level + "%"; }, 120);
-        }
-      }, { threshold: 0.4 });
-      $$(".skill", sk).forEach((n) => sio.observe(n));
     }
 
     /* projects */
@@ -610,7 +604,8 @@
     const offline = () => {
       led.className = "led led-off";
       state.textContent = "offline";
-      $("#mc-motd").textContent = "сервер недоступен :(";
+      $("#mc-motd").textContent = "сервер сейчас не отвечает — попробуй позже";
+      ready($("#mc-motd"));
       $("#mc-online").textContent = "0";
       $("#mc-max").textContent = "—";
       $("#mc-ping").textContent = "—";
@@ -634,6 +629,7 @@
         const clean = d.motd && d.motd.clean;
         $("#mc-motd").textContent =
           (Array.isArray(clean) ? clean.join("\n") : clean) || "—";
+        ready($("#mc-motd"));
         $("#mc-online").textContent = d.players ? d.players.online : "—";
         $("#mc-max").textContent = d.players ? d.players.max : "—";
         $("#mc-ping").textContent = ms;
@@ -746,6 +742,7 @@
         state.innerHTML = `<span class="led led-live"></span>LIVE`;
         thumb.src = s.previewImageURL;
         $("#tw-title").textContent = s.title || "—";
+        ready($("#tw-title"));
         $("#tw-game").textContent = (s.game && s.game.displayName) || "—";
         $("#tw-viewers").textContent = `${s.viewersCount} зрителей`;
         showLive(s, login, url);
@@ -754,13 +751,15 @@
         state.textContent = "offline";
         thumb.src = user.profileImageURL;
         $("#tw-title").textContent = "сейчас не в эфире — но подписаться можно";
+        ready($("#tw-title"));
         $("#tw-game").textContent = "—";
         $("#tw-viewers").textContent = "—";
       }
     } catch (e) {
       liveBadge.hidden = true;
       state.textContent = "н/д";
-      $("#tw-title").textContent = "не в эфире (статус проверить не удалось)";
+      $("#tw-title").textContent = "статус эфира недоступен — открой Twitch";
+      ready($("#tw-title"));
       $("#tw-game").textContent = "—";
       $("#tw-viewers").textContent = "—";
     }
@@ -791,6 +790,7 @@
         track.innerHTML = `<div class="yt-slide"><div class="repo-desc" style="padding:40px;text-align:center">
           не удалось загрузить видео — <a href="${CONFIG.youtube.url}" target="_blank" rel="noopener">открой канал</a></div></div>`;
         $("#yt-count").textContent = "н/д";
+        ready($("#yt-count"));
         return;
       }
     }
@@ -798,6 +798,7 @@
     if (!items.length) {
       track.innerHTML = `<div class="yt-slide"><div class="repo-desc" style="padding:40px;text-align:center">видео не найдены</div></div>`;
       $("#yt-count").textContent = "0 видео";
+      ready($("#yt-count"));
       return;
     }
 
@@ -821,6 +822,7 @@
     }).join("");
 
     $("#yt-count").textContent = `${items.length} видео`;
+    ready($("#yt-count"));
 
     let idx = 0;
     const n = items.length;
