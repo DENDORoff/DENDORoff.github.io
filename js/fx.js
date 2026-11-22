@@ -51,7 +51,15 @@
 
   function togglePanel(show) {
     if (!panel || !trigger) return;
-    panel.hidden = !show;
+    if (show) {
+      panel.hidden = false;
+      requestAnimationFrame(() => panel.classList.add("open"));
+    } else {
+      panel.classList.remove("open");
+      panel.addEventListener("transitionend", () => {
+        if (!panel.classList.contains("open")) panel.hidden = true;
+      }, { once: true });
+    }
     trigger.setAttribute("aria-expanded", show ? "true" : "false");
   }
 
@@ -189,6 +197,7 @@
 
   let vel = 0;
   let idleAt = performance.now();
+  let autoDir = 0; // 1 = вниз, -1 = вверх
 
   function wake() { idleAt = performance.now(); }
   ["pointerdown", "touchstart", "touchmove", "keydown"].forEach((ev) => {
@@ -279,8 +288,16 @@
       window.scrollTo(0, next);
       if (next <= 0 || next >= maxScroll() - 1) vel = 0;
       vel *= 0.93;
-    } else if (opts.auto && idle && window.scrollY < maxScroll() - 2) {
-      window.scrollTo(0, Math.min(maxScroll(), window.scrollY + 0.55));
+    } else if (opts.auto && idle) {
+      const max = maxScroll();
+      if (!autoDir) autoDir = 1;
+      if (autoDir > 0) {
+        if (window.scrollY >= max - 2) autoDir = -1; // в низу — едем обратно вверх
+        else window.scrollTo(0, Math.min(max, window.scrollY + 0.55));
+      } else {
+        if (window.scrollY <= 2) autoDir = 1; // в начале — едем вниз
+        else window.scrollTo(0, Math.max(0, window.scrollY - 0.55));
+      }
     }
 
     const pulse = opts.music ? ((window.MUSIC && window.MUSIC.pulse) || 0) : 0;
@@ -291,6 +308,12 @@
       cy += (my - cy) * 0.24;
       cursor.style.transform =
         "translate3d(" + cx.toFixed(1) + "px," + cy.toFixed(1) + "px,0) translate(-50%,-50%)";
+    }
+
+    /* эквалайзер в шапке: горит только при игре музыки */
+    if (opts.music) {
+      const playing = !!(window.MUSIC && window.MUSIC.playing);
+      body.classList.toggle("fx-eq", playing);
     }
 
     drawDots(pulse);

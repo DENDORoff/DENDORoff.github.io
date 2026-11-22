@@ -274,7 +274,6 @@
           <img class="proj-icon" src="https://cdn.simpleicons.org/${esc(p.icon)}/39ff88" alt="" loading="lazy">
           <h3 class="proj-title">${esc(p.title)}</h3>
           <p class="proj-desc">${esc(p.desc)}</p>
-          <div class="chips">${p.chips.map((c) => `<span class="chip">${esc(c)}</span>`).join("")}</div>
           <a class="btn btn-solid" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.btn)}</a>
         </article>`).join("");
 
@@ -860,6 +859,48 @@
     });
   }
 
+  /* анимированный заголовок страницы: печатается никнейм */
+  function animateTitle() {
+    const original = document.title;
+    const target = CONFIG.profile.name + " — bio // DeWorld dev";
+    document.title = "";
+    let i = 0;
+    const tick = () => {
+      document.title = target.slice(0, i);
+      i++;
+      if (i <= target.length) setTimeout(tick, 55);
+      else setTimeout(() => { document.title = original; }, 2000);
+    };
+    tick();
+  }
+
+  /* подсветка раздела в навигации при прокрутке */
+  function scrollSpy() {
+    const links = $$(".nav a");
+    const sections = [];
+    links.forEach((a) => {
+      const id = a.getAttribute("href");
+      if (id && id.indexOf("#") === 0) {
+        const s = document.getElementById(id.slice(1));
+        if (s) sections.push(s);
+      }
+    });
+    if (!sections.length) return;
+    let currentId = null;
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) currentId = e.target.id;
+      }
+      links.forEach((a) => {
+        const id = a.getAttribute("href");
+        if (id && id.indexOf("#") === 0) {
+          a.classList.toggle("active", id.slice(1) === currentId);
+        }
+      });
+    }, { threshold: 0.35, rootMargin: "-12% 0% -55% 0%" });
+    sections.forEach((s) => io.observe(s));
+  }
+
   /* ============================================================
      INIT
      ============================================================ */
@@ -867,6 +908,8 @@
   ghImages();
   clocks();
   reveals();
+  animateTitle();
+  scrollSpy();
   boot();
   matrix();
 
