@@ -496,68 +496,19 @@
   }
 
   /* ============================================================
-     VK — лента новостей сообщества
+     VK — ссылка на сообщество (API недоступно из браузера из-за CORS)
      ============================================================ */
   async function vkNews() {
-    const feed = $("#vk-feed");
     const state = $("#vk-state");
     const link = $("#vk-link");
-    if (!feed) return;
+    const feed = $("#vk-feed");
+    if (!state || !link || !feed) return;
     link.href = "https://vk.com/" + (CONFIG.vk.domain || "deworld_ru");
-
-    let gid = null;
-    try {
-      const g = await getJSON(
-        "https://api.vk.com/method/groups.getById?group_id=" +
-        encodeURIComponent(CONFIG.vk.domain || "deworld_ru") +
-        "&access_token=" + encodeURIComponent(CONFIG.vk.token || "") +
-        "&v=5.199",
-        { timeout: 10000 }
-      );
-      if (g.response && g.response[0]) gid = g.response[0].id;
-    } catch (e) {
-      if (state) state.textContent = "н/д";
-      feed.innerHTML = `<div class="repo-desc" style="padding:20px;text-align:center;color:var(--muted)">не удалось получить группу</div>`;
-      return;
-    }
-
-    try {
-      const w = await getJSON(
-        "https://api.vk.com/method/wall.get?owner_id=-" + gid +
-        "&access_token=" + encodeURIComponent(CONFIG.vk.token || "") +
-        "&v=5.199&count=5&filter=owner",
-        { timeout: 10000 }
-      );
-      if (!w.response || !w.response.items || !w.response.items.length) throw new Error("no posts");
-      const posts = w.response.items.filter((p) => !isAd(p));
-      if (!posts.length) throw new Error("no posts");
-
-      feed.innerHTML = posts.map((p) => {
-        const date = new Date(p.date * 1000).toLocaleDateString("ru-RU", {
-          day: "numeric", month: "short", year: "numeric",
-        });
-        const text = esc(p.text || "").slice(0, 220);
-        const attachments = (p.attachments || []).filter((a) => a.type === "photo");
-        const img = attachments.length
-          ? `<img src="${esc(attachments[0].photo.sizes[attachments[0].photo.sizes.length - 1].url)}" class="vk-img" alt="">`
-          : "";
-        const likes = p.likes ? p.likes.count : 0;
-        return `
-          <div class="vk-post">
-            <div class="vk-meta"><span class="vk-date">${date}</span><span class="vk-likes">❤ ${likes}</span></div>
-            <div class="vk-text">${text}</div>
-            ${img}
-          </div>`;
-      }).join("");
-      if (state) state.textContent = posts.length + " постов";
-    } catch (e) {
-      if (state) state.textContent = "н/д";
-      feed.innerHTML = `<div class="repo-desc" style="padding:20px;text-align:center;color:var(--muted)">посты не загрузились</div>`;
-    }
-  }
-
-  function isAd(p) {
-    return !!p.marked_as_ad || (p.post_source && p.post_source.type === "ad");
+    state.textContent = "сообщество ВКонтакте";
+    feed.innerHTML = `<div class="repo-desc" style="padding:20px;text-align:center;color:var(--muted)">
+      <div style="font-weight:700;color:var(--green);margin-bottom:8px">deworld_ru</div>
+      подробности и посты — в сообществе ниже
+    </div>`;
   }
 
   /* ============================================================

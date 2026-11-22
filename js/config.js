@@ -88,7 +88,7 @@ const CONFIG = {
     { name: "Twitch", sub: "DENDORoff", url: "https://www.twitch.tv/DENDORoff", icon: "twitch" },
     { name: "Steam", sub: "DENDOR_YT", url: "https://steamcommunity.com/id/DENDOR_YT", icon: "steam" },
     { name: "GitHub", sub: "DENDORoff", url: "https://github.com/DENDORoff", icon: "github" },
-    { name: "Сайт", sub: "de-world.net", url: "https://de-world.net", icon: "website" },
+    { name: "Сайт", sub: "de-world.net", url: "https://de-world.net", icon: "globe" },
   ],
 
   // Навыки по категориям — как на lume.su/dendor
