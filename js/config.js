@@ -40,6 +40,12 @@ const CONFIG = {
     memberSince: "October 2, 2023",
   },
 
+  vk: {
+    domain: "deworld_ru",
+    token: "vk1.a.ovN-XPOjJkRt9NX5OaKHKFjXw-sHcVuN2QfJeEgZ8zXRrxrnVOyaqQi6BkfP5SvCfO6-g1iVkQKBrSIfKaqaVh1Ps9b353F30kPW-Hxl4lgKVTo9w2PiGeOrJaXPDuowrJlO3v3DU-NIOSlJhZ9MXt6urk0UOSIHObkas4f55z6VHUH-sSzEJp-2nUjvBhkVeKlfbythi731mD8oHS9ctA",
+    // ⚠️ токен хранится в открытом репозитории — при необходимости регенерируй
+  },
+
   twitch: {
     login: "DENDORoff",
     url: "https://www.twitch.tv/DENDORoff",
@@ -124,6 +130,15 @@ const CONFIG = {
       link: "https://youtube.de-world.net",
       btn: "@deworld_ru",
       chips: ["shorts", "геймплей", "highlight'ы"],
+      icon: "youtube",
+    },
+    {
+      title: "Треки",
+      desc:
+        "Оригинальная музыка для игр и стримов — пишу в FL Studio. " +
+        "Доступно на YouTube, Spotify, Яндекс Музыке, VK Music и BandLink.",
+      link: "https://band.link/dendor",
+      btn: "все треки →",
       icon: "youtube",
     },
   ],

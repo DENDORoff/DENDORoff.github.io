@@ -462,6 +462,8 @@
       if (ui.cur) ui.cur.textContent = fmtTime(audio.currentTime);
       if (ui.seek) ui.seek.setAttribute("aria-valuenow", String(Math.round(pct)));
       if (ui.miniProg) ui.miniProg.style.width = pct + "%";
+      const tp = document.getElementById("top-prog");
+      if (tp) tp.style.width = pct + "%";
     });
 
     audio.addEventListener("error", () => {

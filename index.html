@@ -14,7 +14,7 @@
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
 
   <link rel="preload" href="fonts/JetBrainsMono-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=5">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23050608'/><text x='2' y='12' font-family='monospace' font-size='11' fill='%2339ff88'>D_</text></svg>">
   <script>
     /* frame-buster: GitHub Pages не отдаёт X-Frame-Options */
@@ -54,13 +54,9 @@
     </div>
     <div class="mini-progress" id="mini-progress" hidden><span id="mini-prog"></span></div>
 
-    <!-- эквалайзер (загорается, когда играет музыка) -->
-    <div class="top-eq" id="top-eq" aria-hidden="true">
-      <span class="eq-bar"></span>
-      <span class="eq-bar"></span>
-      <span class="eq-bar"></span>
-      <span class="eq-bar"></span>
-      <span class="eq-bar"></span>
+    <!-- прогресс трека в шапке (полупрозрачная линия за текстом) -->
+    <div class="top-progress" id="top-progress" aria-hidden="true">
+      <span id="top-prog"></span>
     </div>
 
     <!-- FX settings: dropdown (>2 options, dismissible by swipe/Esc/outside) -->
@@ -72,6 +68,7 @@
         <label class="fx-row"><span>автоскролл при бездействии</span><input type="checkbox" data-fx="auto" checked></label>
         <label class="fx-row"><span>частицы и курсор</span><input type="checkbox" data-fx="particles" checked></label>
         <label class="fx-row"><span>реакция на музыку</span><input type="checkbox" data-fx="music" checked></label>
+        <label class="fx-row"><span>звук клика</span><input type="checkbox" data-fx="click" checked></label>
         <div class="fx-hint">смахни вниз, нажми Esc или кликни вне — закроется</div>
       </div>
     </div>
@@ -257,13 +254,13 @@
           </div>
         </article>
 
-        <!-- GITHUB ACTIVITY GRAPH -->
+        <!-- GITHUB SNAKE -->
         <article class="card w-graph reveal">
           <header class="w-head">
             <span class="w-title">github --activity</span>
             <span class="w-status" id="gh-total">…</span>
           </header>
-          <canvas id="gh-graph" class="gh-graph" height="140"></canvas>
+          <canvas id="gh-snake" class="gh-snake" height="160"></canvas>
           <div class="graph-legend">
             <span>меньше</span>
             <i class="lv lv0"></i><i class="lv lv1"></i><i class="lv lv2"></i><i class="lv lv3"></i><i class="lv lv4"></i>
@@ -363,6 +360,20 @@
           </div>
         </article>
 
+        <!-- VK НОВОСТИ -->
+        <article class="card w-vk reveal">
+          <header class="w-head">
+            <span class="w-title">vk --стена</span>
+            <span class="w-status" id="vk-state">загрузка…</span>
+          </header>
+          <div class="vk-feed" id="vk-feed">
+            <div class="repo-desc" style="padding:20px;text-align:center;color:var(--muted)">загрузка постов…</div>
+          </div>
+          <div class="w-actions">
+            <a class="btn btn-solid" id="vk-link" href="https://vk.com/deworld_ru" target="_blank" rel="noopener">сообщество ВКонтакте</a>
+          </div>
+        </article>
+
         <!-- CLOCK -->
         <article class="card soft w-clock reveal">
           <header class="w-head">
@@ -372,6 +383,42 @@
           <div class="clock-time" id="clk-time">--:--:--</div>
           <div class="clock-date" id="clk-date">—</div>
           <div class="clock-bar"><span id="clk-bar-w"></span></div>
+        </article>
+
+        <!-- ЗМЕЙКА -->
+        <article class="card w-snake reveal" data-game="snake">
+          <header class="w-head">
+            <span class="w-title">snake --game</span>
+            <span class="w-status" id="snake-state">нажми, чтобы активировать</span>
+          </header>
+          <div class="game-wrap" id="snake-wrap">
+            <canvas id="snake-canvas" width="260" height="260"></canvas>
+            <div class="game-overlay" id="snake-overlay">
+              <div class="game-score">счёт: <span id="snake-score">0</span></div>
+              <div class="game-hint">WASD / стрелки · клик — активировать</div>
+            </div>
+          </div>
+          <div class="w-actions">
+            <button class="btn" id="snake-reset" type="button">рекорд: <span id="snake-best">0</span></button>
+          </div>
+        </article>
+
+        <!-- 2048 -->
+        <article class="card w-game2048 reveal" data-game="2048">
+          <header class="w-head">
+            <span class="w-title">2048 --game</span>
+            <span class="w-status" id="game2048-state">нажми, чтобы активировать</span>
+          </header>
+          <div class="game-wrap" id="game2048-wrap">
+            <div class="game2048-grid" id="game2048-grid"></div>
+            <div class="game-overlay" id="game2048-overlay">
+              <div class="game-score">счёт: <span id="game2048-score">0</span></div>
+              <div class="game-hint">WASD / стрелки · клик — активировать</div>
+            </div>
+          </div>
+          <div class="w-actions">
+            <button class="btn" id="game2048-reset" type="button">рекорд: <span id="game2048-best">0</span></button>
+          </div>
         </article>
 
       </div>
@@ -389,9 +436,14 @@
     </div>
   </footer>
 
-  <script src="js/config.js?v=4"></script>
-  <script src="js/main.js?v=4"></script>
-  <script src="js/player.js?v=4"></script>
-  <script src="js/fx.js?v=4"></script>
+  <div class="scrollbar-wrap" id="scrollbar-wrap" aria-hidden="true">
+    <div class="scrollbar-track"></div>
+    <div class="scrollbar-thumb" id="scrollbar-thumb"></div>
+  </div>
+  <script src="js/config.js?v=5"></script>
+  <script src="js/main.js?v=5"></script>
+  <script src="js/player.js?v=5"></script>
+  <script src="js/fx.js?v=5"></script>
+  <script src="js/games.js?v=5"></script>
 </body>
 </html>

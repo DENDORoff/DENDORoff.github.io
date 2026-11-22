@@ -202,34 +202,24 @@ body.booting { overflow: hidden; }
   white-space: nowrap;
 }
 
-/* эквалайзер в шапке (зажигается при игре музыки) */
-.top-eq {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  height: 20px;
-  flex: none;
-  opacity: 0.45;
-  transition: opacity 0.3s ease;
+/* прогресс трека в шапке (полупрозрачная линия за текстом) */
+.top-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(57, 255, 136, 0.12);
+  pointer-events: none;
+  z-index: 1;
 }
-.fx-eq .top-eq { opacity: 1; }
-.top-eq.hidden, [hidden] { display: none !important; }
-
-.eq-bar {
-  width: 4px;
+.top-progress span {
+  display: block;
   height: 100%;
-  background: var(--green);
-  border-radius: 2px;
-  box-shadow: 0 0 8px rgba(57, 255, 136, 0.6);
-  animation: eq 1.2s ease-in-out infinite;
-}
-.eq-bar:nth-child(2) { animation-duration: 0.9s; animation-delay: 0.15s; }
-.eq-bar:nth-child(3) { animation-duration: 1.4s; animation-delay: 0.3s; }
-.eq-bar:nth-child(4) { animation-duration: 1.0s; animation-delay: 0.05s; }
-.eq-bar:nth-child(5) { animation-duration: 1.2s; animation-delay: 0.2s; }
-@keyframes eq {
-  0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
-  50% { transform: scaleY(1); opacity: 1; }
+  width: 0;
+  background: linear-gradient(90deg, var(--green), var(--cyan));
+  box-shadow: 0 0 10px rgba(57, 255, 136, 0.7);
+  transition: width 0.1s linear;
 }
 
 /* навигация: подсветка раздела в фокусе */
@@ -240,18 +230,45 @@ body.booting { overflow: hidden; }
   box-shadow: 0 0 10px rgba(57, 255, 136, 0.25);
 }
 
-/* скроллбар под тему страницы */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: #070a0c; }
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--green), var(--cyan));
-  border-radius: 6px;
-  border: 2px solid #070a0c;
-  box-shadow: 0 0 10px rgba(57, 255, 136, 0.35);
+/* ---------- кастомный скроллбар ---------- */
+html { scrollbar-width: none; } /* Firefox */
+body {
+  overflow: overlay;
 }
-::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, var(--cyan), var(--green)); }
-::-webkit-scrollbar-thumb:active { background: var(--green); }
-::-webkit-scrollbar-corner { background: #070a0c; }
+::-webkit-scrollbar { width: 0; height: 0; background: transparent; }
+
+.scrollbar-wrap {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 100%;
+  z-index: 95;
+  pointer-events: auto;
+}
+.scrollbar-track {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  width: 6px;
+  height: 100%;
+  background: rgba(20, 50, 40, 0.4);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.scrollbar-thumb {
+  position: absolute;
+  right: 2px;
+  width: 6px;
+  height: 80px;
+  background: linear-gradient(180deg, var(--green), var(--cyan));
+  border-radius: 3px;
+  box-shadow: 0 0 10px rgba(57, 255, 136, 0.5);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.scrollbar-thumb:hover { background: linear-gradient(180deg, var(--cyan), var(--green)); }
+.scrollbar-thumb:active { background: var(--green); }
 
 /* ---------- mini player (topbar) ---------- */
 
@@ -1558,6 +1575,88 @@ input[type="range"].pl-range::-moz-range-thumb {
 
 .yt-overlay { text-shadow: 0 1px 4px #000, 0 0 12px #000; }
 .tw-live { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+
+/* VK лента */
+.vk-feed { display: flex; flex-direction: column; gap: 12px; }
+.vk-post {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  background: rgba(11, 17, 19, 0.6);
+  transition: border-color 0.2s;
+}
+.vk-post:hover { border-color: rgba(57, 255, 136, 0.4); }
+.vk-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+.vk-text { font-size: 12.5px; line-height: 1.45; color: var(--text); margin-bottom: 8px; }
+.vk-img { width: 100%; height: auto; border-radius: 4px; margin-top: 6px; object-fit: cover; }
+
+/* ---------- игровые виджеты ---------- */
+
+.game-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  background: rgba(6, 10, 11, 0.6);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  margin: 10px 0;
+}
+.game-wrap canvas { display: block; background: #050608; border-radius: 4px; }
+
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 6, 8, 0.85);
+  border-radius: 4px;
+  pointer-events: none;
+}
+.game-score { font-size: 13px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+.game-hint { font-size: 11px; color: var(--muted); }
+
+/* 2048 сетка */
+.game2048-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 240px;
+  height: 240px;
+  background: #16201d;
+  border-radius: 6px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.game2048-cell {
+  width: 100%;
+  padding-top: 100%;
+  position: relative;
+  background: rgba(57, 255, 136, 0.05);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 20px;
+  color: #eafff3;
+  transition: transform 0.1s ease, background 0.2s ease, color 0.2s ease;
+}
+.game2048-cell.v2 { background: rgba(57, 255, 136, 0.15); color: var(--green); }
+.game2048-cell.v4 { background: rgba(0, 229, 255, 0.15); color: var(--cyan); }
+.game2048-cell.v8 { background: rgba(255, 46, 166, 0.15); color: #ffd9ee; }
+.game2048-cell.v16 { background: rgba(255, 197, 61, 0.15); color: #ffe082; }
+.game2048-cell.v32 { background: rgba(57, 255, 136, 0.25); color: #eafff3; }
+.game2048-cell.v64 { background: rgba(0, 229, 255, 0.25); color: #eafff3; }
+.game2048-cell.v128 { background: rgba(255, 46, 166, 0.25); color: #ffe082; }
+.game2048-cell.v256 { background: rgba(255, 197, 61, 0.25); color: #ffe082; }
+.game2048-cell.v512 { background: rgba(57, 255, 136, 0.35); color: #eafff3; }
+.game2048-cell.v1024 { background: rgba(0, 229, 255, 0.35); color: #eafff3; }
+.game2048-cell.v2048 { background: rgba(255, 46, 166, 0.35); color: #fff; font-size: 16px; }
 
 /* ---------- responsive ---------- */
 

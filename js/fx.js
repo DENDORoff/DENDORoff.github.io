@@ -27,11 +27,14 @@
     auto: getOpt("auto", !reduced),
     particles: getOpt("particles", !reduced && fine),
     music: getOpt("music", !reduced),
+    click: getOpt("click", !reduced),
   };
   const body = document.body;
   const pcanvas = $("#fx-particles");
   const scanvas = $("#fx-sparks");
   const cursor = $("#fx-cursor");
+  const sbWrap = $("#scrollbar-wrap");
+  const sbThumb = $("#scrollbar-thumb");
 
   function applyOpts() {
     Object.keys(opts).forEach((k) => body.classList.toggle("fx-flag-" + k, opts[k]));
@@ -90,6 +93,38 @@
       wake();
     });
   });
+
+  /* ---------- звук клика ---------- */
+  let clickCtx = null;
+  function clickSound() {
+    if (!opts.click || !fine) return;
+    try {
+      if (!clickCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        clickCtx = new AC();
+      }
+      const t = clickCtx.currentTime;
+      const osc = clickCtx.createOscillator();
+      const gain = clickCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(600, t);
+      osc.frequency.exponentialRampToValueAtTime(1200, t + 0.06);
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      osc.connect(gain);
+      gain.connect(clickCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.1);
+    } catch (e) { /* audio blocked */ }
+  }
+
+  document.addEventListener("click", (ev) => {
+    const el = ev.target;
+    if (!el) return;
+    const isInteractive = el.closest("button, a, input[type='button'], input[type='submit'], label, .pl-item, .fx-row, .yt-nav, .yt-dot, .sg-item, .skill-fill, [data-game]");
+    if (isInteractive) clickSound();
+  }, true);
 
   /* ---------- compact cards: expand in viewport ---------- */
 
@@ -161,6 +196,37 @@
     addEventListener("resize", resize);
   }
 
+  /* кастомный скроллбар */
+  function updateScrollbar() {
+    if (!sbWrap || !sbThumb) return;
+    const max = maxScroll();
+    if (max <= 0) { sbWrap.style.opacity = "0"; return; }
+    sbWrap.style.opacity = "1";
+    const view = innerHeight;
+    const total = document.documentElement.scrollHeight;
+    const thumbHeight = Math.max(40, (view / total) * 100);
+    const scrollPct = window.scrollY / max;
+    const trackH = innerHeight;
+    const thumbTop = scrollPct * (trackH - thumbHeight);
+    sbThumb.style.height = thumbHeight + "px";
+    sbThumb.style.top = thumbTop + "px";
+  }
+
+  if (sbWrap) {
+    addEventListener("scroll", updateScrollbar, { passive: true });
+    addEventListener("resize", updateScrollbar, { passive: true });
+    let sbDrag = false;
+    sbThumb.addEventListener("pointerdown", (ev) => { sbDrag = true; ev.preventDefault(); });
+    addEventListener("pointermove", (ev) => {
+      if (!sbDrag) return;
+      const max = maxScroll();
+      const pct = ev.clientY / innerHeight;
+      window.scrollTo(0, pct * max);
+    }, { passive: true });
+    addEventListener("pointerup", () => { sbDrag = false; });
+    updateScrollbar();
+  }
+
   /* ---------- pointer: cursor ring + sparks ---------- */
 
   let mx = -100, my = -100, cx = -100, cy = -100, lastSpark = 0;
@@ -197,9 +263,12 @@
 
   let vel = 0;
   let idleAt = performance.now();
-  let autoDir = 0; // 1 = вниз, -1 = вверх
+  let autoDir = 1; // 1 = вниз, -1 = вверх
+  let autoPhase = "idle"; // idle, accel, cruise, decel, pause
+  let autoSpeed = 0;
+  let autoPhaseStart = 0;
 
-  function wake() { idleAt = performance.now(); }
+  function wake() { idleAt = performance.now(); autoPhase = "idle"; autoSpeed = 0; }
   ["pointerdown", "touchstart", "touchmove", "keydown"].forEach((ev) => {
     addEventListener(ev, wake, { passive: true });
   });
@@ -219,6 +288,9 @@
       : ev.deltaY;
     vel = Math.max(-55, Math.min(55, vel + d * 0.16));
   }, { passive: false });
+
+  /* easing для разгона/торможения */
+  function ease(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
 
   /* ---------- one animation loop for everything ---------- */
 
@@ -282,22 +354,44 @@
     if (document.hidden) return;
 
     /* scroll physics */
+    const max = maxScroll();
     const idle = now - idleAt > 4000;
+
     if (opts.inertia && Math.abs(vel) > 0.15) {
-      const next = Math.max(0, Math.min(maxScroll(), window.scrollY + vel));
+      const next = Math.max(0, Math.min(max, window.scrollY + vel));
       window.scrollTo(0, next);
-      if (next <= 0 || next >= maxScroll() - 1) vel = 0;
+      if (next <= 0 || next >= max - 1) vel = 0;
       vel *= 0.93;
-    } else if (opts.auto && idle) {
-      const max = maxScroll();
-      if (!autoDir) autoDir = 1;
-      if (autoDir > 0) {
-        if (window.scrollY >= max - 2) autoDir = -1; // в низу — едем обратно вверх
-        else window.scrollTo(0, Math.min(max, window.scrollY + 0.55));
-      } else {
-        if (window.scrollY <= 2) autoDir = 1; // в начале — едем вниз
-        else window.scrollTo(0, Math.max(0, window.scrollY - 0.55));
+    } else if (opts.auto && idle && max > 0) {
+      if (autoPhase === "idle") {
+        autoPhase = "accel";
+        autoPhaseStart = now;
+        autoSpeed = 0;
       }
+      if (autoPhase === "accel") {
+        const t = Math.min(1, (now - autoPhaseStart) / 900);
+        autoSpeed = ease(t) * 1.2 * autoDir;
+        if (t >= 1) { autoPhase = "cruise"; autoPhaseStart = now; }
+      } else if (autoPhase === "cruise") {
+        autoSpeed = 1.2 * autoDir;
+        if (now - autoPhaseStart > 1500) { autoPhase = "decel"; autoPhaseStart = now; }
+      } else if (autoPhase === "decel") {
+        const t = Math.min(1, (now - autoPhaseStart) / 900);
+        autoSpeed = (1 - ease(t)) * 1.2 * autoDir;
+        if (t >= 1) {
+          autoPhase = "pause";
+          autoPhaseStart = now;
+        }
+      } else if (autoPhase === "pause") {
+        autoSpeed = 0;
+        if (now - autoPhaseStart > 1500) {
+          autoDir = -autoDir;
+          autoPhase = "accel";
+          autoPhaseStart = now;
+        }
+      }
+      const next = Math.max(0, Math.min(max, window.scrollY + autoSpeed));
+      window.scrollTo(0, next);
     }
 
     const pulse = opts.music ? ((window.MUSIC && window.MUSIC.pulse) || 0) : 0;
@@ -308,12 +402,6 @@
       cy += (my - cy) * 0.24;
       cursor.style.transform =
         "translate3d(" + cx.toFixed(1) + "px," + cy.toFixed(1) + "px,0) translate(-50%,-50%)";
-    }
-
-    /* эквалайзер в шапке: горит только при игре музыки */
-    if (opts.music) {
-      const playing = !!(window.MUSIC && window.MUSIC.playing);
-      body.classList.toggle("fx-eq", playing);
     }
 
     drawDots(pulse);

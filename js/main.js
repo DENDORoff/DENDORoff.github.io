@@ -309,10 +309,10 @@
   }
 
   /* ============================================================
-     GITHUB — activity graph
+     GITHUB — вертикальная змейка активности
      ============================================================ */
-  async function ghGraph() {
-    const canvas = $("#gh-graph");
+  async function githubSnake() {
+    const canvas = $("#gh-snake");
     const totalEl = $("#gh-total");
     if (!canvas) return;
     const weeks = CONFIG.github.graphWeeks;
@@ -328,7 +328,6 @@
         cache.set("gh_events", events);
       } catch (e) {
         if (totalEl) totalEl.textContent = "api rate limit";
-        draw([], true);
         return;
       }
     }
@@ -346,67 +345,99 @@
     const total = counts.reduce((a, b) => a + b, 0);
     if (totalEl) totalEl.textContent = `${total} событий / ${weeks} нед.`;
 
-    const level = (n) => (n === 0 ? 0 : n === 1 ? 1 : n <= 3 ? 2 : n <= 6 ? 3 : 4);
-    const colors = ["#10201b", "#0e4429", "#17a34a", "#26e07a", "#39ff88"];
+    const ctx = canvas.getContext("2d");
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const pad = 10;
+    let w = 0, h = 0;
+    let cols = [], rows = [], cell = 0;
+    let snakeIdx = 0, snakeDir = 1;
+    let animFrame = 0;
 
-    function draw(data, failed) {
-      const dpr = Math.min(devicePixelRatio || 1, 2);
-      const w = canvas.clientWidth || 600;
-      const h = 140;
+    function resize() {
+      w = canvas.clientWidth || 300;
+      h = canvas.clientHeight || 160;
       canvas.width = w * dpr;
       canvas.height = h * dpr;
-      const ctx = canvas.getContext("2d");
-      ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, w, h);
-
-      if (failed) {
-        ctx.fillStyle = "#5f7a70";
-        ctx.font = "13px monospace";
-        ctx.fillText("нет данных (лимит GitHub API — обновится позже)", 8, 70);
-        return;
-      }
-
-      const gap = 4;
-      const startY = 10;
-      const cell = Math.floor(Math.min(
-        (w - gap * weeks) / weeks,
-        (h - startY - 6 - gap * 6) / 7,
-        16
-      ));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cell = Math.floor((h - pad * 2) / 7);
+      if (cell < 4) cell = 4;
+      const gridH = cell * 7;
+      const startY = Math.max(pad, (h - gridH) / 2);
+      rows = [];
+      for (let r = 0; r < 7; r++) rows.push(startY + r * cell);
+      const gap = 3;
+      const availW = w - pad * 2;
+      cell = Math.min(cell, Math.floor((availW - gap * (weeks - 1)) / weeks));
       const gridW = cell * weeks + gap * (weeks - 1);
-      const startX = Math.max(0, (w - gridW) / 2);
-
-      for (let c = 0; c < weeks; c++) {
-        for (let r = 0; r < 7; r++) {
-          const idx = c * 7 + r;
-          const v = data[idx] || 0;
-          const offset = days - 1 - idx;
-          const dt = new Date(today.getTime() - offset * 86400000);
-          ctx.fillStyle = colors[level(v)];
-          ctx.fillRect(startX + c * (cell + gap), startY + r * (cell + gap), cell, cell);
-          canvas._cells = canvas._cells || [];
-          canvas._cells[idx] = { x: startX + c * (cell + gap), y: startY + r * (cell + gap), dt, v };
-        }
-      }
-
-      canvas.onmousemove = (ev) => {
-        const rect = canvas.getBoundingClientRect();
-        const mx = ev.clientX - rect.left;
-        const my = ev.clientY - rect.top;
-        let tip = "";
-        for (const cellInfo of canvas._cells) {
-          if (!cellInfo) continue;
-          if (mx >= cellInfo.x && mx <= cellInfo.x + cell && my >= cellInfo.y && my <= cellInfo.y + cell) {
-            tip = `${cellInfo.dt.toLocaleDateString("ru-RU")}: ${cellInfo.v} событий`;
-            break;
-          }
-        }
-        canvas.title = tip;
-      };
+      const startX = Math.max(pad, (w - gridW) / 2);
+      cols = [];
+      for (let c = 0; c < weeks; c++) cols.push(startX + c * (cell + gap));
     }
 
-    draw(counts);
-    addEventListener("resize", () => draw(counts));
+    function levelColor(v) {
+      if (v === 0) return "#10201b";
+      if (v === 1) return "#0e4429";
+      if (v <= 3) return "#17a34a";
+      if (v <= 6) return "#26e07a";
+      return "#39ff88";
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      ctx.font = "10px monospace";
+      ctx.textBaseline = "middle";
+
+      // сетка колонок
+      for (let c = 0; c < weeks; c++) {
+        const v = counts[c] || 0;
+        const colH = Math.min(cell * Math.min(v, 7), h - pad * 2);
+        const colY = rows[6] - colH + cell;
+        ctx.fillStyle = levelColor(v);
+        ctx.fillRect(cols[c], colY, cell, colH);
+        ctx.fillStyle = "rgba(57,255,136,0.15)";
+        ctx.fillRect(cols[c], rows[6] - cell + 1, cell, cell - 1);
+      }
+
+      // змейка
+      const idx = Math.min(snakeIdx, weeks - 1);
+      const v = counts[idx] || 0;
+      const colH = Math.min(cell * Math.min(v, 7), h - pad * 2);
+      const colY = rows[6] - colH + cell;
+      const cx = cols[idx] + cell / 2;
+      const cy = colY + cell / 2;
+      ctx.fillStyle = "#ff2ea6";
+      ctx.beginPath();
+      ctx.arc(cx, cy, cell * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#050608";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // подпись текущего дня
+      const offset = days - 1 - idx;
+      const dt = new Date(today.getTime() - offset * 86400000);
+      ctx.fillStyle = "#39ff88";
+      ctx.fillText(dt.toLocaleDateString("ru-RU", { day: "numeric", month: "short" }), cols[idx], rows[6] + cell + 10);
+    }
+
+    function step() {
+      animFrame = requestAnimationFrame(step);
+      const now = Date.now();
+      if (!window.__snakeT) window.__snakeT = now;
+      if (now - window.__snakeT > 120) {
+        window.__snakeT = now;
+        snakeIdx += snakeDir;
+        if (snakeIdx >= weeks) { snakeIdx = weeks - 1; snakeDir = -1; }
+        if (snakeIdx < 0) { snakeIdx = 0; snakeDir = 1; }
+        draw();
+      }
+    }
+
+    resize();
+    draw();
+    addEventListener("resize", resize);
+    addEventListener("resize", draw);
+    step();
   }
 
   /* ============================================================
@@ -452,6 +483,81 @@
     }
     loaded = true;
     pick();
+
+    /* автопрокрутка карусели репозиторий */
+    let repoTimer = null;
+    const restartRepoTimer = () => {
+      if (repoTimer) clearInterval(repoTimer);
+      repoTimer = setInterval(() => pick(), 6000);
+    };
+    restartRepoTimer();
+    btn.addEventListener("pointerenter", () => { if (repoTimer) clearInterval(repoTimer); repoTimer = null; });
+    btn.addEventListener("pointerleave", restartRepoTimer);
+  }
+
+  /* ============================================================
+     VK — лента новостей сообщества
+     ============================================================ */
+  async function vkNews() {
+    const feed = $("#vk-feed");
+    const state = $("#vk-state");
+    const link = $("#vk-link");
+    if (!feed) return;
+    link.href = "https://vk.com/" + (CONFIG.vk.domain || "deworld_ru");
+
+    let gid = null;
+    try {
+      const g = await getJSON(
+        "https://api.vk.com/method/groups.getById?group_id=" +
+        encodeURIComponent(CONFIG.vk.domain || "deworld_ru") +
+        "&access_token=" + encodeURIComponent(CONFIG.vk.token || "") +
+        "&v=5.199",
+        { timeout: 10000 }
+      );
+      if (g.response && g.response[0]) gid = g.response[0].id;
+    } catch (e) {
+      if (state) state.textContent = "н/д";
+      feed.innerHTML = `<div class="repo-desc" style="padding:20px;text-align:center;color:var(--muted)">не удалось получить группу</div>`;
+      return;
+    }
+
+    try {
+      const w = await getJSON(
+        "https://api.vk.com/method/wall.get?owner_id=-" + gid +
+        "&access_token=" + encodeURIComponent(CONFIG.vk.token || "") +
+        "&v=5.199&count=5&filter=owner",
+        { timeout: 10000 }
+      );
+      if (!w.response || !w.response.items || !w.response.items.length) throw new Error("no posts");
+      const posts = w.response.items.filter((p) => !isAd(p));
+      if (!posts.length) throw new Error("no posts");
+
+      feed.innerHTML = posts.map((p) => {
+        const date = new Date(p.date * 1000).toLocaleDateString("ru-RU", {
+          day: "numeric", month: "short", year: "numeric",
+        });
+        const text = esc(p.text || "").slice(0, 220);
+        const attachments = (p.attachments || []).filter((a) => a.type === "photo");
+        const img = attachments.length
+          ? `<img src="${esc(attachments[0].photo.sizes[attachments[0].photo.sizes.length - 1].url)}" class="vk-img" alt="">`
+          : "";
+        const likes = p.likes ? p.likes.count : 0;
+        return `
+          <div class="vk-post">
+            <div class="vk-meta"><span class="vk-date">${date}</span><span class="vk-likes">❤ ${likes}</span></div>
+            <div class="vk-text">${text}</div>
+            ${img}
+          </div>`;
+      }).join("");
+      if (state) state.textContent = posts.length + " постов";
+    } catch (e) {
+      if (state) state.textContent = "н/д";
+      feed.innerHTML = `<div class="repo-desc" style="padding:20px;text-align:center;color:var(--muted)">посты не загрузились</div>`;
+    }
+  }
+
+  function isAd(p) {
+    return !!p.marked_as_ad || (p.post_source && p.post_source.type === "ad");
   }
 
   /* ============================================================
@@ -882,23 +988,29 @@
       const id = a.getAttribute("href");
       if (id && id.indexOf("#") === 0) {
         const s = document.getElementById(id.slice(1));
-        if (s) sections.push(s);
+        if (s) sections.push({ el: s, id: id.slice(1), link: a });
       }
     });
     if (!sections.length) return;
-    let currentId = null;
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) currentId = e.target.id;
+
+    const update = () => {
+      const y = window.scrollY + innerHeight * 0.25;
+      let hit = null;
+      for (const s of sections) {
+        const top = s.el.offsetTop;
+        const bottom = top + s.el.offsetHeight;
+        if (y >= top && y < bottom) hit = s.id;
       }
+      if (!hit && sections.length) hit = sections[sections.length - 1].id;
       links.forEach((a) => {
         const id = a.getAttribute("href");
         if (id && id.indexOf("#") === 0) {
-          a.classList.toggle("active", id.slice(1) === currentId);
+          a.classList.toggle("active", id.slice(1) === hit);
         }
       });
-    }, { threshold: 0.35, rootMargin: "-12% 0% -55% 0%" });
-    sections.forEach((s) => io.observe(s));
+    };
+    update();
+    addEventListener("scroll", update, { passive: true });
   }
 
   /* ============================================================
@@ -913,10 +1025,11 @@
   boot();
   matrix();
 
-  ghGraph();
+  githubSnake();
   randomRepo();
   discordServer();
   discordCard();
+  vkNews();
   minecraft();
   steam();
   twitch();
