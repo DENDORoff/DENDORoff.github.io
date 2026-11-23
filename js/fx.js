@@ -135,8 +135,13 @@
     const eq = document.getElementById("top-eq");
     if (!eq) return;
     const playing = !!(window.MUSIC && window.MUSIC.playing);
-    if (playing) eq.removeAttribute("hidden");
-    else eq.setAttribute("hidden", "");
+    if (playing) {
+      eq.removeAttribute("hidden");
+      document.body.classList.add("fx-eq");
+    } else {
+      eq.setAttribute("hidden", "");
+      document.body.classList.remove("fx-eq");
+    }
   }
   setInterval(updateEq, 150);
 

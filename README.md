@@ -1,3 +1,37 @@
-[![GitHub Stats](https://github-stats-extended.vercel.app/api?username=DENDORoff&hide_rank=true&hide_title=true&show=reviews%2Cdiscussions_started%2Cdiscussions_answered%2Cprs_merged%2Cprs_merged_percentage%2Cprs_commented%2Cprs_reviewed%2Cissues_commented%2Ccontributions%2Call_time_contribs&show_icons=true&include_all_commits=true&theme=dark_github)](https://github-stats-extended.vercel.app/api?username=DENDORoff&hide_rank=true&hide_title=true&show=reviews%2Cdiscussions_started%2Cdiscussions_answered%2Cprs_merged%2Cprs_merged_percentage%2Cprs_commented%2Cprs_reviewed%2Cissues_commented%2Ccontributions%2Call_time_contribs&show_icons=true&include_all_commits=true&theme=dark_github)
+# DENDOR — Bio Page
 
-[![GitHub Stats](https://github-stats-extended.vercel.app/api/top-langs?username=DENDORoff&layout=compact&hide_title=true&langs_count=20&hide_values=true&theme=dark_github)](https://github-stats-extended.vercel.app/api/top-langs?username=DENDORoff&layout=compact&hide_title=true&langs_count=20&hide_values=true&theme=dark_github)
+Био-страница на GitHub Pages с неоновым терминальным стилем, живыми виджетами и музыкальным плеером.
+
+**Сайт:** https://dendor.de-world.net
+
+## Возможности
+
+- **Музыкальный плеер** — автооткрытие треков из папки `music/`, ID3-теги (название, артист, обложка), визуализатор, мини-плеер в шапке, клавиша пробела для паузы.
+- **Виджеты** — Minecraft сервер, Discord сервер и профиль, Steam, Twitch (эфир + плеер), YouTube карусель, GitHub активность, часы с погодой.
+- **Эффекты** — матричный дождь, частицы, след за курсором, кастомный скроллбар, инерционная прокрутка, автоскролл при бездействии.
+- **Игры** — змейка и 2048 в виджетах (активация по клику, WASD/стрелки, рекорды в localStorage).
+
+## Технологии
+
+- HTML5 / CSS3 / JavaScript (без фреймворков)
+- GitHub Pages для хостинга
+- GitHub API для автооткрытия треков и данных репозиториев
+- Web Audio API для визуализатора и звука клика
+
+## Структура
+
+```
+index.html        — основная страница
+css/style.css     — стили
+js/config.js      — конфигурация (домены, ключи, навыки, проекты)
+js/main.js        — виджеты и анимации
+js/player.js      — музыкальный плеер
+js/fx.js          — эффекты взаимодействия
+js/games.js       — змейка и 2048
+music/            — MP3 треки
+fonts/            — JetBrains Mono (OFL)
+```
+
+## Лицензия
+
+MIT
