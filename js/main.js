@@ -309,10 +309,10 @@
   }
 
   /* ============================================================
-     GITHUB — вертикальная змейка активности
+     GITHUB — вертикальный график активности
      ============================================================ */
-  async function githubSnake() {
-    const canvas = $("#gh-snake");
+  async function githubGraph() {
+    const canvas = $("#gh-graph");
     const totalEl = $("#gh-total");
     if (!canvas) return;
     const weeks = CONFIG.github.graphWeeks;
@@ -347,11 +347,9 @@
 
     const ctx = canvas.getContext("2d");
     const dpr = Math.min(devicePixelRatio || 1, 2);
-    const pad = 10;
+    const pad = 8;
     let w = 0, h = 0;
     let cols = [], rows = [], cell = 0;
-    let snakeIdx = 0, snakeDir = 1;
-    let animFrame = 0;
 
     function resize() {
       w = canvas.clientWidth || 300;
@@ -359,19 +357,20 @@
       canvas.width = w * dpr;
       canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      cell = Math.floor((h - pad * 2) / 7);
+      // недели по вертикали, дни по горизонтали
+      cell = Math.floor((h - pad * 2) / weeks);
       if (cell < 4) cell = 4;
-      const gridH = cell * 7;
+      const gridH = cell * weeks;
       const startY = Math.max(pad, (h - gridH) / 2);
       rows = [];
-      for (let r = 0; r < 7; r++) rows.push(startY + r * cell);
+      for (let w_ = 0; w_ < weeks; w_++) rows.push(startY + w_ * cell);
       const gap = 3;
       const availW = w - pad * 2;
-      cell = Math.min(cell, Math.floor((availW - gap * (weeks - 1)) / weeks));
-      const gridW = cell * weeks + gap * (weeks - 1);
+      cell = Math.min(cell, Math.floor((availW - gap * 6) / 7));
+      const gridW = cell * 7 + gap * 6;
       const startX = Math.max(pad, (w - gridW) / 2);
       cols = [];
-      for (let c = 0; c < weeks; c++) cols.push(startX + c * (cell + gap));
+      for (let d_ = 0; d_ < 7; d_++) cols.push(startX + d_ * (cell + gap));
     }
 
     function levelColor(v) {
@@ -387,49 +386,23 @@
       ctx.font = "10px monospace";
       ctx.textBaseline = "middle";
 
-      // сетка колонок
-      for (let c = 0; c < weeks; c++) {
-        const v = counts[c] || 0;
-        const colH = Math.min(cell * Math.min(v, 7), h - pad * 2);
-        const colY = rows[6] - colH + cell;
+      for (let w_ = 0; w_ < weeks; w_++) {
+        const offset = days - 1 - w_ * 7;
+        const dt = new Date(today.getTime() - offset * 86400000);
+        let v = 0;
+        for (let d_ = 0; d_ < 7; d_++) {
+          const idx = days - 1 - (w_ * 7 + d_);
+          if (idx >= 0 && idx < days) v = Math.max(v, counts[idx] || 0);
+        }
         ctx.fillStyle = levelColor(v);
-        ctx.fillRect(cols[c], colY, cell, colH);
-        ctx.fillStyle = "rgba(57,255,136,0.15)";
-        ctx.fillRect(cols[c], rows[6] - cell + 1, cell, cell - 1);
+        ctx.fillRect(cols[3], rows[w_], cell, cell);
       }
 
-      // змейка
-      const idx = Math.min(snakeIdx, weeks - 1);
-      const v = counts[idx] || 0;
-      const colH = Math.min(cell * Math.min(v, 7), h - pad * 2);
-      const colY = rows[6] - colH + cell;
-      const cx = cols[idx] + cell / 2;
-      const cy = colY + cell / 2;
-      ctx.fillStyle = "#ff2ea6";
-      ctx.beginPath();
-      ctx.arc(cx, cy, cell * 0.35, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#050608";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // подпись текущего дня
-      const offset = days - 1 - idx;
-      const dt = new Date(today.getTime() - offset * 86400000);
-      ctx.fillStyle = "#39ff88";
-      ctx.fillText(dt.toLocaleDateString("ru-RU", { day: "numeric", month: "short" }), cols[idx], rows[6] + cell + 10);
-    }
-
-    function step() {
-      animFrame = requestAnimationFrame(step);
-      const now = Date.now();
-      if (!window.__snakeT) window.__snakeT = now;
-      if (now - window.__snakeT > 120) {
-        window.__snakeT = now;
-        snakeIdx += snakeDir;
-        if (snakeIdx >= weeks) { snakeIdx = weeks - 1; snakeDir = -1; }
-        if (snakeIdx < 0) { snakeIdx = 0; snakeDir = 1; }
-        draw();
+      // по дням недели снизу
+      const dayNames = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
+      for (let d_ = 0; d_ < 7; d_++) {
+        ctx.fillStyle = "rgba(57,255,136,0.4)";
+        ctx.fillText(dayNames[d_], cols[d_] + cell / 2, rows[weeks - 1] + cell + 12);
       }
     }
 
@@ -437,7 +410,6 @@
     draw();
     addEventListener("resize", resize);
     addEventListener("resize", draw);
-    step();
   }
 
   /* ============================================================
@@ -484,31 +456,64 @@
     loaded = true;
     pick();
 
-    /* автопрокрутка карусели репозиторий */
+    /* карусель репозиториев — как у YouTube: точки + стрелки + автопрокрутка */
+    const dotsBox = $("#repo-dots");
+    const prevBtn = $("#repo-prev");
+    const nextBtn = $("#repo-next");
+    const n = repos ? repos.length : 0;
+    let repoIdx = 0;
     let repoTimer = null;
-    const restartRepoTimer = () => {
-      if (repoTimer) clearInterval(repoTimer);
-      repoTimer = setInterval(() => pick(), 6000);
-    };
-    restartRepoTimer();
-    btn.addEventListener("pointerenter", () => { if (repoTimer) clearInterval(repoTimer); repoTimer = null; });
-    btn.addEventListener("pointerleave", restartRepoTimer);
-  }
 
-  /* ============================================================
-     VK — ссылка на сообщество (API недоступно из браузера из-за CORS)
-     ============================================================ */
-  async function vkNews() {
-    const state = $("#vk-state");
-    const link = $("#vk-link");
-    const feed = $("#vk-feed");
-    if (!state || !link || !feed) return;
-    link.href = "https://vk.com/" + (CONFIG.vk.domain || "deworld_ru");
-    state.textContent = "сообщество ВКонтакте";
-    feed.innerHTML = `<div class="repo-desc" style="padding:20px;text-align:center;color:var(--muted)">
-      <div style="font-weight:700;color:var(--green);margin-bottom:8px">deworld_ru</div>
-      подробности и посты — в сообществе ниже
-    </div>`;
+    function renderCarousel() {
+      if (!repos || !repos.length) return;
+      const r = repos[repoIdx];
+      nameEl.textContent = r.name;
+      $("#repo-desc").textContent = r.description || "без описания";
+      $("#repo-lang").textContent = r.language || "—";
+      $("#repo-stars").textContent = "★ " + (r.stargazers_count || 0);
+      $("#repo-upd").textContent = "upd " + new Date(r.pushed_at || r.updated_at).toLocaleDateString("ru-RU");
+      $("#repo-link").href = r.html_url;
+      $("#repo-index").textContent = `${repoIdx + 1}/${n}`;
+      dotsBox.innerHTML = repos.map((_, i) =>
+        `<button class="repo-dot${i === repoIdx ? " on" : ""}" data-i="${i}" aria-label="репозиторий ${i + 1}"></button>`
+      ).join("");
+    }
+
+    function show(i) {
+      repoIdx = (i + n) % n;
+      renderCarousel();
+    }
+
+    dotsBox.addEventListener("click", (e) => {
+      const b = e.target.closest(".repo-dot");
+      if (b) { show(+b.dataset.i); resetTimer(); }
+    });
+    prevBtn.addEventListener("click", () => { show(repoIdx - 1); resetTimer(); });
+    nextBtn.addEventListener("click", () => { show(repoIdx + 1); resetTimer(); });
+    btn.addEventListener("click", () => { pick(); resetTimer(); });
+
+    const resetTimer = () => {
+      if (repoTimer) clearInterval(repoTimer);
+      repoTimer = setInterval(() => show(repoIdx + 1), 6000);
+    };
+
+    const pauseTimer = () => { if (repoTimer) clearInterval(repoTimer); repoTimer = null; };
+    const box = $(".repo-carousel");
+    box.addEventListener("pointerenter", pauseTimer);
+    box.addEventListener("pointerleave", () => { if (!repoTimer) resetTimer(); });
+
+    if (!repos) {
+      try {
+        repos = await getJSON(
+          `https://api.github.com/users/${CONFIG.github.user}/repos?per_page=100&sort=updated`,
+          { timeout: 9000 }
+        );
+        cache.set("gh_repos", repos);
+      } catch (e) { repos = []; }
+    }
+    loaded = true;
+    renderCarousel();
+    resetTimer();
   }
 
   /* ============================================================
@@ -947,12 +952,13 @@
     const update = () => {
       const y = window.scrollY + innerHeight * 0.25;
       let hit = null;
-      for (const s of sections) {
-        const top = s.el.offsetTop;
-        const bottom = top + s.el.offsetHeight;
-        if (y >= top && y < bottom) hit = s.id;
+      if (y > sections[0].el.offsetTop) {
+        for (const s of sections) {
+          const top = s.el.offsetTop;
+          const bottom = top + s.el.offsetHeight;
+          if (y >= top && y < bottom) hit = s.id;
+        }
       }
-      if (!hit && sections.length) hit = sections[sections.length - 1].id;
       links.forEach((a) => {
         const id = a.getAttribute("href");
         if (id && id.indexOf("#") === 0) {
@@ -976,13 +982,15 @@
   boot();
   matrix();
 
-  githubSnake();
+  githubGraph();
   randomRepo();
   discordServer();
   discordCard();
-  vkNews();
   minecraft();
   steam();
   twitch();
   youtube();
+
+  /* блокировка контекстного меню ПКМ */
+  document.addEventListener("contextmenu", (ev) => ev.preventDefault());
 })();

@@ -107,24 +107,29 @@
       const t = clickCtx.currentTime;
       const osc = clickCtx.createOscillator();
       const gain = clickCtx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(600, t);
-      osc.frequency.exponentialRampToValueAtTime(1200, t + 0.06);
-      gain.gain.setValueAtTime(0.15, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      osc.type = "square";
+      osc.frequency.setValueAtTime(900, t);
+      osc.frequency.exponentialRampToValueAtTime(1400, t + 0.04);
+      gain.gain.setValueAtTime(0.1, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
       osc.connect(gain);
       gain.connect(clickCtx.destination);
       osc.start(t);
-      osc.stop(t + 0.1);
+      osc.stop(t + 0.06);
     } catch (e) { /* audio blocked */ }
   }
 
-  document.addEventListener("click", (ev) => {
-    const el = ev.target;
-    if (!el) return;
-    const isInteractive = el.closest("button, a, input[type='button'], input[type='submit'], label, .pl-item, .fx-row, .yt-nav, .yt-dot, .sg-item, .skill-fill, [data-game]");
-    if (isInteractive) clickSound();
-  }, true);
+  document.addEventListener("click", clickSound, true);
+
+  /* ---------- эквалайзер в шапке: только при игре музыки ---------- */
+  function updateEq() {
+    const eq = document.getElementById("top-eq");
+    if (!eq) return;
+    const playing = !!(window.MUSIC && window.MUSIC.playing);
+    if (playing) eq.removeAttribute("hidden");
+    else eq.setAttribute("hidden", "");
+  }
+  setInterval(updateEq, 150);
 
   /* ---------- compact cards: expand in viewport ---------- */
 
@@ -357,12 +362,9 @@
     const max = maxScroll();
     const idle = now - idleAt > 4000;
 
-    if (opts.inertia && Math.abs(vel) > 0.15) {
-      const next = Math.max(0, Math.min(max, window.scrollY + vel));
-      window.scrollTo(0, next);
-      if (next <= 0 || next >= max - 1) vel = 0;
-      vel *= 0.93;
-    } else if (opts.auto && idle && max > 0) {
+    /* автопрокрутка: целевая скорость с плавным разгоном/торможением */
+    let autoTargetSpeed = 0;
+    if (opts.auto && idle && max > 0) {
       if (autoPhase === "idle") {
         autoPhase = "accel";
         autoPhaseStart = now;
@@ -370,28 +372,36 @@
       }
       if (autoPhase === "accel") {
         const t = Math.min(1, (now - autoPhaseStart) / 900);
-        autoSpeed = ease(t) * 1.2 * autoDir;
+        autoTargetSpeed = ease(t) * 1.2 * autoDir;
         if (t >= 1) { autoPhase = "cruise"; autoPhaseStart = now; }
       } else if (autoPhase === "cruise") {
-        autoSpeed = 1.2 * autoDir;
+        autoTargetSpeed = 1.2 * autoDir;
         if (now - autoPhaseStart > 1500) { autoPhase = "decel"; autoPhaseStart = now; }
       } else if (autoPhase === "decel") {
         const t = Math.min(1, (now - autoPhaseStart) / 900);
-        autoSpeed = (1 - ease(t)) * 1.2 * autoDir;
+        autoTargetSpeed = (1 - ease(t)) * 1.2 * autoDir;
         if (t >= 1) {
           autoPhase = "pause";
           autoPhaseStart = now;
         }
       } else if (autoPhase === "pause") {
-        autoSpeed = 0;
+        autoTargetSpeed = 0;
         if (now - autoPhaseStart > 1500) {
           autoDir = -autoDir;
           autoPhase = "accel";
           autoPhaseStart = now;
         }
       }
-      const next = Math.max(0, Math.min(max, window.scrollY + autoSpeed));
+      /* инерция автопрокрутки: плавно сближаем скорость с целевой */
+      vel += (autoTargetSpeed - vel) * 0.15;
+    }
+
+    /* применить накопленную скорость (и от колеса, и от автопрокрутки) */
+    if (Math.abs(vel) > 0.05) {
+      const next = Math.max(0, Math.min(max, window.scrollY + vel));
       window.scrollTo(0, next);
+      vel *= 0.93;
+      if (next <= 0 || next >= max - 1) vel = 0;
     }
 
     const pulse = opts.music ? ((window.MUSIC && window.MUSIC.pulse) || 0) : 0;
