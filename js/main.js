@@ -175,7 +175,8 @@
      CLOCKS
      ============================================================ */
   function clocks() {
-    const fmt = new Intl.DateTimeFormat("ru-RU", {
+    const almaty = new Intl.DateTimeFormat("ru-RU", {
+      timeZone: "Asia/Almaty",
       weekday: "long", day: "numeric", month: "long", year: "numeric",
     });
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -184,14 +185,18 @@
 
     const tick = () => {
       const now = new Date();
+      const almatyTime = new Intl.DateTimeFormat("ru-RU", {
+        timeZone: "Asia/Almaty",
+        hour: "2-digit", minute: "2-digit", second: "2-digit",
+      }).format(now);
       const hh = String(now.getHours()).padStart(2, "0");
       const mm = String(now.getMinutes()).padStart(2, "0");
       const ss = String(now.getSeconds()).padStart(2, "0");
       const t = `${hh}:${mm}:${ss}`;
       ["#topclock", "#hero-clock", "#clk-time"].forEach((s) => {
-        const el = $(s); if (el) el.textContent = t;
+        const el = $(s); if (el) el.textContent = almatyTime;
       });
-      const d = $("#clk-date"); if (d) d.textContent = fmt.format(now);
+      const d = $("#clk-date"); if (d) d.textContent = almaty.format(now);
       const bar = $("#clk-bar-w");
       if (bar) {
         const pct = ((now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) / 86400) * 100;
@@ -200,6 +205,20 @@
     };
     tick();
     setInterval(tick, 1000);
+
+    /* погода для Павлодара (wttr.in, без ключа) */
+    const weatherEl = $("#clk-weather");
+    if (weatherEl) {
+      (async () => {
+        try {
+          const res = await fetch("https://wttr.in/Pavlodar?format=%t+%c", { timeout: 8000 });
+          if (res.ok) {
+            const text = await res.text();
+            weatherEl.textContent = text.trim();
+          }
+        } catch (e) { /* weather unavailable */ }
+      })();
+    }
   }
 
   /* ============================================================
@@ -309,11 +328,12 @@
   }
 
   /* ============================================================
-     GITHUB — вертикальный график активности
+     GITHUB — вертикальный график активности + последнее действие
      ============================================================ */
   async function githubGraph() {
     const canvas = $("#gh-graph");
     const totalEl = $("#gh-total");
+    const lastEl = $("#gh-last");
     if (!canvas) return;
     const weeks = CONFIG.github.graphWeeks;
     const days = weeks * 7;
@@ -328,6 +348,7 @@
         cache.set("gh_events", events);
       } catch (e) {
         if (totalEl) totalEl.textContent = "api rate limit";
+        draw([]);
         return;
       }
     }
@@ -345,9 +366,34 @@
     const total = counts.reduce((a, b) => a + b, 0);
     if (totalEl) totalEl.textContent = `${total} событий / ${weeks} нед.`;
 
+    // последнее действие
+    if (lastEl && events.length) {
+      const ev = events[0];
+      const d = new Date(ev.created_at).toLocaleDateString("ru-RU", {
+        day: "numeric", month: "short", year: "numeric",
+      });
+      const t = new Date(ev.created_at).toLocaleTimeString("ru-RU", {
+        hour: "2-digit", minute: "2-digit",
+      });
+      let action = "";
+      if (ev.type === "PushEvent") {
+        const repo = (ev.repo && ev.repo.name) || "репозиторий";
+        action = `${d} в ${t} — запушил в ${repo}`;
+      } else if (ev.type === "CreateEvent") {
+        action = `${d} в ${t} — создал ${ev.payload && ev.payload.ref_type || "объект"}`;
+      } else if (ev.type === "IssuesEvent") {
+        action = `${d} в ${t} — комментарий к issue`;
+      } else if (ev.type === "PullRequestEvent") {
+        action = `${d} в ${t} — pull request`;
+      } else {
+        action = `${d} в ${t} — ${ev.type}`;
+      }
+      lastEl.textContent = action;
+    }
+
     const ctx = canvas.getContext("2d");
     const dpr = Math.min(devicePixelRatio || 1, 2);
-    const pad = 8;
+    const pad = 10;
     let w = 0, h = 0;
     let cols = [], rows = [], cell = 0;
 
@@ -381,21 +427,19 @@
       return "#39ff88";
     }
 
-    function draw() {
+    function draw(data) {
+      data = data || counts;
       ctx.clearRect(0, 0, w, h);
       ctx.font = "10px monospace";
       ctx.textBaseline = "middle";
 
       for (let w_ = 0; w_ < weeks; w_++) {
-        const offset = days - 1 - w_ * 7;
-        const dt = new Date(today.getTime() - offset * 86400000);
-        let v = 0;
         for (let d_ = 0; d_ < 7; d_++) {
           const idx = days - 1 - (w_ * 7 + d_);
-          if (idx >= 0 && idx < days) v = Math.max(v, counts[idx] || 0);
+          const v = idx >= 0 && idx < days ? data[idx] || 0 : 0;
+          ctx.fillStyle = levelColor(v);
+          ctx.fillRect(cols[d_], rows[w_], cell, cell);
         }
-        ctx.fillStyle = levelColor(v);
-        ctx.fillRect(cols[3], rows[w_], cell, cell);
       }
 
       // по дням недели снизу
@@ -407,9 +451,9 @@
     }
 
     resize();
-    draw();
+    draw(counts);
     addEventListener("resize", resize);
-    addEventListener("resize", draw);
+    addEventListener("resize", () => draw(counts));
   }
 
   /* ============================================================
@@ -468,6 +512,9 @@
       if (!repos || !repos.length) return;
       const r = repos[repoIdx];
       nameEl.textContent = r.name;
+      nameEl.style.cursor = "pointer";
+      nameEl.title = r.html_url;
+      nameEl.onclick = () => { window.open(r.html_url, "_blank"); };
       $("#repo-desc").textContent = r.description || "без описания";
       $("#repo-lang").textContent = r.language || "—";
       $("#repo-stars").textContent = "★ " + (r.stargazers_count || 0);
@@ -813,16 +860,16 @@
         thumb.src = user.profileImageURL;
         $("#tw-title").textContent = "сейчас не в эфире — но подписаться можно";
         ready($("#tw-title"));
-        $("#tw-game").textContent = "—";
-        $("#tw-viewers").textContent = "—";
+        $("#tw-game").textContent = "";
+        $("#tw-viewers").textContent = "";
       }
     } catch (e) {
       liveBadge.hidden = true;
       state.textContent = "н/д";
       $("#tw-title").textContent = "статус эфира недоступен — открой Twitch";
       ready($("#tw-title"));
-      $("#tw-game").textContent = "—";
-      $("#tw-viewers").textContent = "—";
+      $("#tw-game").textContent = "";
+      $("#tw-viewers").textContent = "";
     }
   }
 

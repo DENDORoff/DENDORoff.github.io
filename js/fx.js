@@ -105,21 +105,30 @@
         clickCtx = new AC();
       }
       const t = clickCtx.currentTime;
+      // основной тон + обертон для приятного щелчка
       const osc = clickCtx.createOscillator();
+      const osc2 = clickCtx.createOscillator();
       const gain = clickCtx.createGain();
-      osc.type = "square";
+      osc.type = "sine";
       osc.frequency.setValueAtTime(900, t);
       osc.frequency.exponentialRampToValueAtTime(1400, t + 0.04);
-      gain.gain.setValueAtTime(0.1, t);
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(1800, t);
+      osc2.frequency.exponentialRampToValueAtTime(2800, t + 0.04);
+      gain.gain.setValueAtTime(0.08, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
       osc.connect(gain);
+      osc2.connect(gain);
       gain.connect(clickCtx.destination);
       osc.start(t);
       osc.stop(t + 0.06);
+      osc2.start(t);
+      osc2.stop(t + 0.06);
     } catch (e) { /* audio blocked */ }
   }
 
   document.addEventListener("click", clickSound, true);
+  document.addEventListener("contextmenu", clickSound, true);
 
   /* ---------- эквалайзер в шапке: только при игре музыки ---------- */
   function updateEq() {
@@ -230,6 +239,24 @@
     }, { passive: true });
     addEventListener("pointerup", () => { sbDrag = false; });
     updateScrollbar();
+
+    /* искры при движении над скроллбаром */
+    sbWrap.addEventListener("pointermove", (ev) => {
+      if (!fine || !opts.particles) return;
+      const now = performance.now();
+      if (sparks.length < 20 && now - lastSpark > 20) {
+        lastSpark = now;
+        const rect = sbWrap.getBoundingClientRect();
+        sparks.push({
+          x: rect.left + rect.width / 2 + (Math.random() - 0.5) * 6,
+          y: ev.clientY,
+          vx: (Math.random() - 0.5) * 1.0,
+          vy: (Math.random() - 0.5) * 1.0 - 0.2,
+          life: 1,
+          cyan: Math.random() > 0.5,
+        });
+      }
+    }, { passive: true });
   }
 
   /* ---------- pointer: cursor ring + sparks ---------- */
@@ -267,13 +294,14 @@
   /* ---------- scroll: inertia + idle auto-scroll ---------- */
 
   let vel = 0;
+  let autoVel = 0;
   let idleAt = performance.now();
   let autoDir = 1; // 1 = вниз, -1 = вверх
   let autoPhase = "idle"; // idle, accel, cruise, decel, pause
   let autoSpeed = 0;
   let autoPhaseStart = 0;
 
-  function wake() { idleAt = performance.now(); autoPhase = "idle"; autoSpeed = 0; }
+  function wake() { idleAt = performance.now(); autoPhase = "idle"; autoVel = 0; }
   ["pointerdown", "touchstart", "touchmove", "keydown"].forEach((ev) => {
     addEventListener(ev, wake, { passive: true });
   });
@@ -363,12 +391,12 @@
     const idle = now - idleAt > 4000;
 
     /* автопрокрутка: целевая скорость с плавным разгоном/торможением */
-    let autoTargetSpeed = 0;
+    let autoSpeed = 0;
     if (opts.auto && idle && max > 0) {
       if (autoPhase === "idle") {
         autoPhase = "accel";
         autoPhaseStart = now;
-        autoSpeed = 0;
+        autoVel = 0;
       }
       if (autoPhase === "accel") {
         const t = Math.min(1, (now - autoPhaseStart) / 900);
@@ -392,16 +420,20 @@
           autoPhaseStart = now;
         }
       }
-      /* инерция автопрокрутки: плавно сближаем скорость с целевой */
-      vel += (autoTargetSpeed - vel) * 0.15;
+      /* плавное сближение текущей скорости с целевой */
+      autoVel += (autoTargetSpeed - autoVel) * 0.1;
+    } else {
+      autoTargetSpeed = 0;
     }
 
     /* применить накопленную скорость (и от колеса, и от автопрокрутки) */
-    if (Math.abs(vel) > 0.05) {
-      const next = Math.max(0, Math.min(max, window.scrollY + vel));
+    const curVel = vel + autoVel;
+    if (Math.abs(curVel) > 0.05) {
+      const next = Math.max(0, Math.min(max, window.scrollY + curVel));
       window.scrollTo(0, next);
       vel *= 0.93;
-      if (next <= 0 || next >= max - 1) vel = 0;
+      autoVel *= 0.97;
+      if (next <= 0 || next >= max - 1) { vel = 0; autoVel = 0; }
     }
 
     const pulse = opts.music ? ((window.MUSIC && window.MUSIC.pulse) || 0) : 0;

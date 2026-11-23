@@ -202,7 +202,7 @@ body.booting { overflow: hidden; }
   white-space: nowrap;
 }
 
-/* прогресс трека в шапке (полупрозрачная линия за текстом) */
+/* прогресс трека и эквалайзер в шапке (за текстом) */
 .top-progress {
   position: absolute;
   left: 0;
@@ -222,20 +222,20 @@ body.booting { overflow: hidden; }
   transition: width 0.1s linear;
 }
 
-/* эквалайзер в шапке — поверх прогресс-линии, за текстом */
+/* эквалайзер в шапке — над прогресс-линией, за текстом */
 .top-eq {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -4px;
-  height: 14px;
+  bottom: 4px;
+  height: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
   pointer-events: none;
   z-index: 2;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 .fx-flag-music .top-eq { opacity: 1; }
 .top-eq.hidden, [hidden] { display: none !important; }
@@ -256,6 +256,14 @@ body.booting { overflow: hidden; }
   0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
   50% { transform: scaleY(1); opacity: 1; }
 }
+
+/* текст в шапке поверх progres/eq */
+.topbar > * { position: relative; z-index: 3; }
+.topbar .nav { z-index: 3; }
+.topbar .brand { z-index: 3; }
+.topbar .topclock { z-index: 3; }
+.topbar .mini { z-index: 3; }
+.topbar .fx-menu { z-index: 3; }
 
 /* навигация: подсветка раздела в фокусе */
 .nav a.active {
@@ -1192,6 +1200,42 @@ input[type="range"].pl-range::-moz-range-thumb {
 .repo-desc { font-size: 13px; color: #9fb8ac; margin: 0 0 12px; min-height: 40px; }
 .repo-meta { display: flex; gap: 6px; flex-wrap: wrap; }
 
+.repo-carousel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.repo-nav {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #0a1411;
+  color: var(--cyan);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.repo-nav:hover { background: var(--cyan); color: #050608; }
+.repo-dots { display: flex; gap: 5px; flex: none; }
+.repo-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(57, 255, 136, 0.2);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.repo-dot.on { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+
 /* --- discord --- */
 
 .dsc-name {
@@ -1367,6 +1411,8 @@ input[type="range"].pl-range::-moz-range-thumb {
 }
 
 .clock-date { color: var(--muted); font-size: 13px; margin-top: 4px; text-transform: capitalize; }
+
+.clock-weather { color: var(--cyan); font-size: 12px; margin-top: 2px; text-shadow: 0 0 8px rgba(0, 229, 255, 0.5); }
 
 .clock-bar {
   margin-top: 14px;

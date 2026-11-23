@@ -63,6 +63,10 @@ const CONFIG = {
     refreshMs: 60000,
   },
 
+  weather: {
+    city: "Pavlodar", // Kazakhstan
+  },
+
   music: {
     dir: "music",
     repo: "DENDORoff/DENDORoff.github.io",
@@ -134,12 +138,10 @@ const CONFIG = {
     },
     {
       title: "Треки",
-      desc:
-        "Оригинальная музыка для игр и стримов — пишу в FL Studio. " +
-        "Доступно на YouTube, Spotify, Яндекс Музыке, VK Music и BandLink.",
+      desc: "Оригинальная музыка. Пишу в FL Studio.",
       link: "https://band.link/dendor",
-      btn: "все треки →",
-      icon: "youtube",
+      btn: "BandLink",
+      icon: "music",
     },
   ],
 
