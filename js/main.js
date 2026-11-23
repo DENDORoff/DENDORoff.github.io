@@ -776,10 +776,12 @@
       const name = val("steamid") || CONFIG.steam.name;
       const avatar = val("avatarfull") || CONFIG.steam.avatar;
       const since = val("memberSince") || CONFIG.steam.memberSince;
+      const lastSeen = val("lastseentime") || "";
 
       $("#st-name").textContent = name;
       $("#st-ava").src = avatar;
-      act.textContent = (online ? "в сети" : "не в сети") + " • в Steam с " + since;
+      const actText = (online ? "в сети" : "не в сети") + " • в Steam с " + since;
+      act.textContent = lastSeen ? actText + " • última: " + lastSeen : actText;
       state.textContent = online ? "online" : "offline";
       led.className = "led " + (online ? "led-on" : "led-off");
     } catch (e) {
