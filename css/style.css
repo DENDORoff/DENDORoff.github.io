@@ -165,25 +165,6 @@ body.booting { overflow: hidden; }
   font-weight: 700;
   letter-spacing: 0.5px;
   white-space: nowrap;
-  text-shadow: 0 0 10px rgba(57, 255, 136, 0.4);
-}
-.brand::after {
-  content: "";
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--green), var(--cyan));
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-.fx-eq .brand::after { opacity: 0.8; box-shadow: 0 0 16px var(--green); animation: brandPulse 1.5s infinite; }
-.fx-eq .brand { text-shadow: 0 0 18px rgba(57, 255, 136, 0.8); }
-@keyframes brandPulse {
-  0%, 100% { opacity: 0.6; box-shadow: 0 0 12px var(--green); }
-  50% { opacity: 1; box-shadow: 0 0 20px var(--green); }
 }
 .brand-prompt { color: var(--cyan); }
 .dim { color: var(--muted); }

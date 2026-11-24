@@ -130,7 +130,7 @@
   document.addEventListener("click", clickSound, true);
   document.addEventListener("contextmenu", clickSound, true);
 
-  /* ---------- эквалайзер в шапке: только при игре музыки ---------- */
+  /* ---------- эквалайзер в шапке: реально зависит от музыки ---------- */
   function updateEq() {
     const eq = document.getElementById("top-eq");
     if (!eq) return;
@@ -138,12 +138,20 @@
     if (playing) {
       eq.removeAttribute("hidden");
       document.body.classList.add("fx-eq");
+      const pulse = (window.MUSIC.pulse || 0);
+      const bars = eq.querySelectorAll(".eq-bar");
+      bars.forEach((bar, i) => {
+        const base = 0.3 + 0.4 * Math.sin(i * 0.7 + Date.now() * 0.003);
+        const h = Math.max(0.2, Math.min(1, base + pulse * 0.8));
+        bar.style.transform = `scaleY(${h})`;
+        bar.style.opacity = String(0.4 + 0.6 * h);
+      });
     } else {
       eq.setAttribute("hidden", "");
       document.body.classList.remove("fx-eq");
     }
   }
-  setInterval(updateEq, 150);
+  setInterval(updateEq, 50);
 
   /* ---------- compact cards: expand in viewport ---------- */
 
@@ -245,21 +253,31 @@
     addEventListener("pointerup", () => { sbDrag = false; });
     updateScrollbar();
 
-    /* искры при движении над скроллбаром */
-    sbWrap.addEventListener("pointermove", (ev) => {
+    /* искры при движении мыши над скроллбаром и при перетаскивании ползунка */
+    function sbSpark(x, y) {
       if (!fine || !opts.particles) return;
       const now = performance.now();
-      if (sparks.length < 20 && now - lastSpark > 20) {
+      if (sparks.length < 20 && now - lastSpark > 15) {
         lastSpark = now;
-        const rect = sbWrap.getBoundingClientRect();
         sparks.push({
-          x: rect.left + rect.width / 2 + (Math.random() - 0.5) * 6,
-          y: ev.clientY,
+          x: x, y: y,
           vx: (Math.random() - 0.5) * 1.0,
           vy: (Math.random() - 0.5) * 1.0 - 0.2,
           life: 1,
           cyan: Math.random() > 0.5,
         });
+      }
+    }
+    sbWrap.addEventListener("pointermove", (ev) => {
+      sbSpark(ev.clientX, ev.clientY);
+    }, { passive: true });
+    addEventListener("scroll", () => {
+      if (!fine || !opts.particles) return;
+      const now = performance.now();
+      if (sparks.length < 10 && now - lastSpark > 30) {
+        lastSpark = now;
+        const r = sbThumb.getBoundingClientRect();
+        sbSpark(r.left + r.width / 2, r.top + r.height / 2);
       }
     }, { passive: true });
   }
@@ -444,9 +462,10 @@
     const pulse = opts.music ? ((window.MUSIC && window.MUSIC.pulse) || 0) : 0;
 
     /* cursor ring lags slightly behind the pointer */
-    if (fine && opts.particles && cursor) {
+    if (fine && cursor) {
       cx += (mx - cx) * 0.24;
       cy += (my - cy) * 0.24;
+      if (opts.particles) cursor.classList.add("on");
       cursor.style.transform =
         "translate3d(" + cx.toFixed(1) + "px," + cy.toFixed(1) + "px,0) translate(-50%,-50%)";
     }

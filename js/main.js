@@ -211,11 +211,11 @@
     if (weatherEl) {
       (async () => {
         try {
-          const res = await fetch("https://wttr.in/Pavlodar?format=%t+%c", { timeout: 8000 });
-          if (res.ok) {
-            const text = await res.text();
-            weatherEl.textContent = text.trim();
-          }
+          const text = await getText("https://wttr.in/Pavlodar?format=%t+%c", {
+            headers: { "User-Agent": "Mozilla/5.0" },
+            timeout: 8000,
+          });
+          weatherEl.textContent = text.trim();
         } catch (e) { /* weather unavailable */ }
       })();
     }
@@ -403,14 +403,14 @@
       canvas.width = w * dpr;
       canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      // недели по вертикали, дни по горизонтали
+      // недели по вертикали, дни по горизонтали — растягиваем на всю карточку
       cell = Math.floor((h - pad * 2) / weeks);
       if (cell < 4) cell = 4;
       const gridH = cell * weeks;
       const startY = Math.max(pad, (h - gridH) / 2);
       rows = [];
       for (let w_ = 0; w_ < weeks; w_++) rows.push(startY + w_ * cell);
-      const gap = 3;
+      const gap = 2;
       const availW = w - pad * 2;
       cell = Math.min(cell, Math.floor((availW - gap * 6) / 7));
       const gridW = cell * 7 + gap * 6;
@@ -576,6 +576,12 @@
       if (nameEl && w.name) nameEl.textContent = w.name;
       const inv = $("#dsc-invite");
       if (inv && w.instant_invite) inv.href = w.instant_invite;
+
+      const iconEl = $("#dsc-icon");
+      if (iconEl && w.icon) {
+        iconEl.src = `https://cdn.discordapp.com/icons/${guild}/${w.icon}.png?size=64`;
+        iconEl.hidden = false;
+      }
 
       const box = $("#dsc-members");
       if (box && Array.isArray(w.members)) {
