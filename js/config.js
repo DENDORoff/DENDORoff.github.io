@@ -16,7 +16,8 @@ const CONFIG = {
 
   github: {
     user: "DENDORoff",
-    graphWeeks: 10,
+    // Полный год недель: график растянут на всю высоту карточки.
+    graphWeeks: 52,
   },
 
   discord: {
@@ -24,9 +25,10 @@ const CONFIG = {
     user: "1470170052274815171",
     guild: "867681876231979028",
     serverUrl: "https://discord.de-world.net",
-    // Иконка сервера. widget.json не отдаёт иконку сервера — положи реальный
-    // файл в assets/deworld-icon.png и при необходимости измени путь.
+    // Реальная иконка сообщества DEWORLD (аватарка vk.com/deworld_ru),
+    // сохранена локально. Запасной вариант — иконка MC-сервера.
     icon: "assets/deworld-icon.png",
+    iconFallback: "assets/deworld-mc-icon.png",
     // Имя в guild widget.json (для поиска твоего аватара/статуса)
     widgetName: "DENDOR",
     // Описание профиля Discord (если активного статуса нет).
@@ -41,11 +43,6 @@ const CONFIG = {
     avatar:
       "https://avatars.fastly.steamstatic.com/f66810876e9f494a073bcc92e568975f6882c1df_full.jpg",
     memberSince: "October 2, 2023",
-  },
-
-  vk: {
-    domain: "deworld_ru",
-    // Ранее здесь был публичный токен — удалён. ВК-лента не используется.
   },
 
   twitch: {
@@ -72,7 +69,7 @@ const CONFIG = {
   // Если есть публичный профиль/плейлист SoundCloud — вставь ссылку сюда,
   // и карточка с плеером появится автоматически. Без ключей API.
   soundcloud: {
-    url: "",
+    url: "https://soundcloud.com/dendor-music",
   },
 
   music: {
@@ -82,12 +79,6 @@ const CONFIG = {
     // Ручной плейлист (строки "music/track.mp3" или {file,title,artist}).
     // Пусто → плеер сам сканирует папку music/ через GitHub API.
     tracks: [],
-  },
-
-  counter: {
-    name: "dendoroff-github-io",
-    theme: "minecraft",
-    length: 8,
   },
 
   socials: [

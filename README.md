@@ -27,7 +27,6 @@ js/config.js      — конфигурация (домены, ключи, нав
 js/main.js        — виджеты и анимации
 js/player.js      — музыкальный плеер
 js/fx.js          — эффекты взаимодействия
-js/games.js       — змейка и 2048
 music/            — MP3 треки
 fonts/            — JetBrains Mono (OFL)
 ```

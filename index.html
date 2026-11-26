@@ -22,7 +22,7 @@
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
 
   <link rel="preload" href="fonts/JetBrainsMono-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <link rel="stylesheet" href="css/style.css?v=9">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23050608'/><text x='2' y='12' font-family='monospace' font-size='11' fill='%2339ff88'>D_</text></svg>">
   <script>
     /* frame-buster: GitHub Pages не отдаёт X-Frame-Options */
@@ -97,7 +97,6 @@
     <section id="home" class="hero">
       <div class="hero-tag reveal">[ system online ]</div>
       <h1 class="glitch reveal" data-text="DENDOR">DENDOR</h1>
-      <span class="hero-neon" aria-hidden="true"></span>
       <p class="hero-sub reveal">
         <span class="prompt-gt">&gt;</span>
         <span id="hero-type"></span><span class="cursor">█</span>
@@ -271,7 +270,7 @@
             <span class="w-title">github --activity</span>
             <span class="w-status" id="gh-total">…</span>
           </header>
-          <canvas id="gh-graph" class="gh-graph" height="210"></canvas>
+          <canvas id="gh-graph" class="gh-graph" height="460"></canvas>
           <div id="gh-last" class="gh-last"></div>
           <div class="graph-legend">
             <span>меньше</span>
@@ -339,6 +338,7 @@
             </div>
             <span class="led" id="lan-led"></span>
           </div>
+          <div class="dsc-detail" id="lan-detail"></div>
         </article>
 
         <!-- STEAM -->
@@ -386,7 +386,7 @@
             <span class="w-title">soundcloud --player</span>
             <span class="w-status">embed</span>
           </header>
-          <iframe id="sc-frame" title="SoundCloud player" scrolling="no" frameborder="no" allow="autoplay" loading="lazy"></iframe>
+          <iframe id="sc-frame" title="SoundCloud player" scrolling="no" frameborder="no" allow="autoplay; encrypted-media" loading="lazy"></iframe>
           <div class="w-actions">
             <a class="btn" id="sc-link" href="https://soundcloud.com" target="_blank" rel="noopener">открыть SoundCloud →</a>
           </div>
@@ -423,9 +423,9 @@
     <div class="scrollbar-track"></div>
     <div class="scrollbar-thumb" id="scrollbar-thumb"></div>
   </div>
-  <script src="js/config.js?v=7"></script>
-  <script src="js/main.js?v=7"></script>
-  <script src="js/player.js?v=7"></script>
-  <script src="js/fx.js?v=7"></script>
+  <script src="js/config.js?v=9"></script>
+  <script src="js/main.js?v=9"></script>
+  <script src="js/player.js?v=9"></script>
+  <script src="js/fx.js?v=9"></script>
 </body>
 </html>

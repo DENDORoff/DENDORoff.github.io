@@ -209,9 +209,11 @@
     tick();
     setInterval(tick, 1000);
 
-    /* погода Павлодара — Open-Meteo (JSON, без ключа и CORS-проблем) */
+    /* погода — Open-Meteo (JSON, без ключа и CORS-проблем) */
     const weatherEl = $("#clk-weather");
-    if (weatherEl) {
+    const city = String((CONFIG.weather && CONFIG.weather.city) || "Pavlodar");
+    const coords = city === "Pavlodar" ? { lat: 52.29, lon: 76.96 } : null;
+    if (weatherEl && coords) {
       const icon = (code) =>
         code === 0 ? "☀" :
         code <= 2 ? "🌤" :
@@ -224,7 +226,7 @@
       (async () => {
         try {
           const j = await getJSON(
-            "https://api.open-meteo.com/v1/forecast?latitude=52.29&longitude=76.96" +
+            `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}` +
             "&current=temperature_2m,weather_code&timezone=Asia%2FAlmaty",
             { timeout: 9000 }
           );
@@ -232,7 +234,7 @@
           if (!cur) return;
           const sign = cur.temperature_2m > 0 ? "+" : "";
           weatherEl.textContent =
-            `${sign}${Math.round(cur.temperature_2m)}° ${icon(cur.weather_code)} · Павлодар`;
+            `${sign}${Math.round(cur.temperature_2m)}° ${icon(cur.weather_code)} · ${city}`;
         } catch (e) {
           weatherEl.textContent = "погода недоступна";
         }
@@ -244,6 +246,10 @@
      REVEAL + SECTION TITLE TYPING
      ============================================================ */
   function reveals() {
+    if (!("IntersectionObserver" in window)) {
+      $$(".reveal").forEach((n) => n.classList.add("in"));
+      return;
+    }
     const io = new IntersectionObserver((entries) => {
       for (const e of entries) {
         if (!e.isIntersecting) continue;
@@ -280,7 +286,7 @@
     const box = $("#contacts");
     if (box) {
       box.innerHTML = CONFIG.socials.map((s) => {
-        const icon = s.icon === "website"
+        const icon = (s.icon === "website" || s.icon === "globe")
           ? `<svg viewBox="0 0 24 24" fill="none" stroke="#39ff88" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14 0 18M12 3c-3 3.5-3 14 0 18"/></svg>`
           : `<img src="https://cdn.simpleicons.org/${esc(s.icon)}/39ff88" alt="" loading="lazy">`;
         return `<a class="soc" href="${esc(s.url)}" target="_blank" rel="noopener">
@@ -308,9 +314,12 @@
     const pr = $("#projects-list");
     if (pr) {
       const note = `<svg class="proj-icon proj-note" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>`;
+      const deworld = `<img class="proj-icon proj-deworld" src="${esc(CONFIG.discord.icon)}" alt="DeWorld" loading="lazy">`;
       const cards = CONFIG.projects.map((p) => `
         <article class="card reveal">
-          ${p.icon === "music" ? note : `<img class="proj-icon" src="https://cdn.simpleicons.org/${esc(p.icon)}/39ff88" alt="" loading="lazy">`}
+          ${p.icon === "music" ? note
+            : (p.icon === "website" || p.icon === "globe") ? deworld
+            : `<img class="proj-icon" src="https://cdn.simpleicons.org/${esc(p.icon)}/39ff88" alt="" loading="lazy">`}
           <h3 class="proj-title">${esc(p.title)}</h3>
           <p class="proj-desc">${esc(p.desc)}</p>
           <a class="btn btn-solid" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.btn)}</a>
@@ -325,11 +334,15 @@
         </article>`;
 
       pr.innerHTML = cards + open;
-      $$(".reveal", pr).forEach((n) => {
-        new IntersectionObserver((ents, obs) => {
-          ents.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); obs.disconnect(); } });
-        }, { threshold: 0.12 }).observe(n);
-      });
+      if ("IntersectionObserver" in window) {
+        $$(".reveal", pr).forEach((n) => {
+          new IntersectionObserver((ents, obs) => {
+            ents.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); obs.disconnect(); } });
+          }, { threshold: 0.12 }).observe(n);
+        });
+      } else {
+        $$(".reveal", pr).forEach((n) => n.classList.add("in"));
+      }
     }
   }
 
@@ -367,8 +380,8 @@
         );
         cache.set("gh_events", events);
       } catch (e) {
-        if (totalEl) totalEl.textContent = "api rate limit";
-        draw([]);
+        if (totalEl) totalEl.textContent = "данные недоступны";
+        if (lastEl) lastEl.textContent = "GitHub API временно недоступен";
         return;
       }
     }
@@ -472,8 +485,12 @@
 
     resize();
     draw(counts);
-    addEventListener("resize", resize);
-    addEventListener("resize", () => draw(counts));
+    const redraw = () => { resize(); draw(counts); };
+    if ("ResizeObserver" in window) {
+      new ResizeObserver(redraw).observe(canvas);
+    } else {
+      addEventListener("resize", redraw);
+    }
   }
 
   /* ============================================================
@@ -484,29 +501,6 @@
     const nameEl = $("#repo-name");
     if (!btn || !nameEl) return;
     let repos = cache.get("gh_repos", 30);
-    let loaded = !!repos;
-    let last = -1;
-
-    const pick = () => {
-      if (!loaded) return;
-      if (!repos || !repos.length) {
-        $("#repo-desc").textContent = "репозитории не загрузились — попробуй позже";
-        return;
-      }
-      let i;
-      do { i = Math.floor(Math.random() * repos.length); } while (repos.length > 1 && i === last);
-      last = i;
-      const r = repos[i];
-      nameEl.textContent = r.name;
-      $("#repo-desc").textContent = r.description || "без описания";
-      $("#repo-lang").textContent = r.language || "—";
-      $("#repo-stars").textContent = "★ " + (r.stargazers_count || 0);
-      $("#repo-upd").textContent = "upd " + new Date(r.pushed_at || r.updated_at).toLocaleDateString("ru-RU");
-      $("#repo-link").href = r.html_url;
-      $("#repo-index").textContent = `${i + 1}/${repos.length}`;
-    };
-
-    btn.addEventListener("click", pick);
 
     if (!repos) {
       try {
@@ -517,15 +511,13 @@
         cache.set("gh_repos", repos);
       } catch (e) { repos = []; }
     }
-    loaded = true;
-    pick();
 
     /* карусель репозиториев — как у YouTube: точки + стрелки + автопрокрутка */
     const dotsBox = $("#repo-dots");
     const prevBtn = $("#repo-prev");
     const nextBtn = $("#repo-next");
     const n = repos ? repos.length : 0;
-    let repoIdx = 0;
+    let repoIdx = n > 1 ? Math.floor(Math.random() * n) : 0;
     let repoTimer = null;
 
     function renderCarousel() {
@@ -547,6 +539,7 @@
     }
 
     function show(i) {
+      if (!n) return;
       repoIdx = (i + n) % n;
       renderCarousel();
     }
@@ -557,7 +550,13 @@
     });
     prevBtn.addEventListener("click", () => { show(repoIdx - 1); resetTimer(); });
     nextBtn.addEventListener("click", () => { show(repoIdx + 1); resetTimer(); });
-    btn.addEventListener("click", () => { pick(); resetTimer(); });
+    btn.addEventListener("click", () => {
+      if (!n) { $("#repo-desc").textContent = "репозитории не загрузились — попробуй позже"; return; }
+      let i = repoIdx;
+      if (n > 1) do { i = Math.floor(Math.random() * n); } while (i === repoIdx);
+      show(i);
+      resetTimer();
+    });
 
     const resetTimer = () => {
       if (repoTimer) clearInterval(repoTimer);
@@ -569,16 +568,6 @@
     box.addEventListener("pointerenter", pauseTimer);
     box.addEventListener("pointerleave", () => { if (!repoTimer) resetTimer(); });
 
-    if (!repos) {
-      try {
-        repos = await getJSON(
-          `https://api.github.com/users/${CONFIG.github.user}/repos?per_page=100&sort=updated`,
-          { timeout: 9000 }
-        );
-        cache.set("gh_repos", repos);
-      } catch (e) { repos = []; }
-    }
-    loaded = true;
     renderCarousel();
     resetTimer();
   }
@@ -599,7 +588,13 @@
 
       const iconEl = $("#dsc-icon");
       if (iconEl) {
-        iconEl.onerror = () => { iconEl.hidden = true; };
+        iconEl.onerror = () => {
+          if (CONFIG.discord.iconFallback && !iconEl.src.includes("deworld-mc-icon")) {
+            iconEl.src = CONFIG.discord.iconFallback;
+          } else {
+            iconEl.hidden = true;
+          }
+        };
         iconEl.src = CONFIG.discord.icon;
         iconEl.hidden = false;
       }
@@ -610,13 +605,25 @@
           <span class="dsc-m" title="${esc(m.username)}">
             <img src="${esc(m.avatar_url)}" alt="" loading="lazy">${esc(m.username)}
           </span>`).join("") || `<span class="soc-sub">никто не онлайн</span>`;
+      } else if (box) {
+        box.innerHTML = `<span class="soc-sub">никто не онлайн</span>`;
       }
     } catch (e) {
       if (onlineEl) onlineEl.textContent = "н/д";
+      const box = $("#dsc-members");
+      if (box) box.innerHTML = `<span class="soc-sub">список участников недоступен</span>`;
       const inv = $("#dsc-invite");
       if (inv) inv.href = serverUrl;
       const iconEl = $("#dsc-icon");
-      if (iconEl && CONFIG.discord.icon) { iconEl.src = CONFIG.discord.icon; iconEl.hidden = false; }
+      if (iconEl && CONFIG.discord.icon) {
+        iconEl.onerror = () => {
+          if (CONFIG.discord.iconFallback && !iconEl.src.includes("deworld-mc-icon")) {
+            iconEl.src = CONFIG.discord.iconFallback;
+          } else iconEl.hidden = true;
+        };
+        iconEl.src = CONFIG.discord.icon;
+        iconEl.hidden = false;
+      }
     }
   }
 
@@ -655,6 +662,7 @@
     const stateEl = $("#lan-state");
     const led = $("#lan-led");
     const act = $("#lan-activity");
+    const detail = $("#lan-detail");
     const ava = $("#lan-ava");
     const deco = $("#lan-deco");
     const map = {
@@ -666,6 +674,41 @@
     };
     const widgetName = CONFIG.discord.widgetName || CONFIG.discord.tag;
     const bio = renderEmoji(CONFIG.discord.bio || CONFIG.profile.bio);
+    const HISTORY_KEY = "bio:discord:history";
+
+    function loadHistory() {
+      try {
+        const h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        return Array.isArray(h) ? h : [];
+      } catch (e) { return []; }
+    }
+    function appendHistory(label, activity) {
+      const now = Date.now();
+      const sig = label + "|" + activity;
+      let h = loadHistory();
+      if (!h.length || h[0].sig !== sig || now - h[0].ts > 30 * 60 * 1000) {
+        h.unshift({ ts: now, sig, label, activity });
+        h = h.slice(0, 3);
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); } catch (e) { /* private */ }
+      }
+      return h;
+    }
+    function paint(label, ledCls, activityHtml, activityText) {
+      if (stateEl) stateEl.textContent = label;
+      if (led) led.className = "led " + ledCls;
+      if (act) act.innerHTML = activityHtml || bio;
+      if (!detail) return;
+      const h = appendHistory(label, activityText || "");
+      const items = h.length
+        ? h.map((x) =>
+            `<span class="dsc-log-item"><time>${esc(new Date(x.ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }))}</time>${esc(x.label)}${x.activity ? " · " + esc(x.activity) : ""}</span>`
+          ).join("")
+        : `<span class="dsc-log-item">наблюдений пока нет</span>`;
+      detail.innerHTML =
+        `<div class="dsc-detail-row"><span class="dsc-k">сейчас</span><span class="dsc-v">${esc(label)}${activityText ? " · " + esc(activityText) : ""}</span></div>` +
+        `<div class="dsc-detail-row"><span class="dsc-k">история</span><span class="dsc-v dsc-log">${items}</span></div>` +
+        `<div class="dsc-note">локальные наблюдения на этом устройстве</div>`;
+    }
 
     /* 1) Lanyard — живые данные: аним. аватар, рамка, активности */
     try {
@@ -674,8 +717,6 @@
       const d = j.data;
       const du = d.discord_user || {};
       const [label, ledCls] = map[d.discord_status] || ["—", ""];
-      if (stateEl) stateEl.textContent = label;
-      if (led) led.className = "led " + ledCls;
 
       if (du.avatar && ava) {
         const ext = du.avatar.indexOf("a_") === 0 ? "gif" : "png";
@@ -689,11 +730,19 @@
       const custom = (d.activities || []).find((a) => a.type === 4 && (a.state || a.name));
       const game = (d.activities || []).find((a) => a.type !== 4 && a.type !== 3 && (a.name || a.details));
       let html = "";
-      if (custom) html = statusEmoji(custom.emoji) + (custom.state ? (statusEmoji(custom.emoji) ? " " : "") + renderEmoji(custom.state) : renderEmoji(custom.name || ""));
-      else if (d.listening_to_spotify && d.spotify) html = `♪ ${esc(d.spotify.artist_name || d.spotify.artist)} — ${esc(d.spotify.track)}`;
-      else if (game) html = renderEmoji(game.name || "") + (game.details ? " — " + renderEmoji(game.details) : "");
-      else html = bio;
-      if (act) act.innerHTML = html || bio;
+      let activityText = "";
+      if (custom) {
+        const emoji = statusEmoji(custom.emoji);
+        activityText = custom.state || custom.name || "";
+        html = emoji + (custom.state ? (emoji ? " " : "") + renderEmoji(custom.state) : renderEmoji(custom.name || ""));
+      } else if (d.listening_to_spotify && d.spotify) {
+        activityText = `${d.spotify.artist_name || d.spotify.artist} — ${d.spotify.track}`;
+        html = `♪ ${esc(activityText)}`;
+      } else if (game) {
+        activityText = game.name || "";
+        html = renderEmoji(activityText) + (game.details ? " — " + renderEmoji(game.details) : "");
+      }
+      paint(label, ledCls, html || bio, activityText);
       return;
     } catch (e) { /* нет Lanyard → widget ниже */ }
 
@@ -704,17 +753,15 @@
         (x) => String(x.username || "").toLowerCase() === String(widgetName || "").toLowerCase()
       );
       const [label, ledCls] = map[(m && m.status) || "offline"] || ["н/д", ""];
-      if (stateEl) stateEl.textContent = label;
-      if (led) led.className = "led " + ledCls;
       if (m && m.avatar_url && ava) { ava.src = m.avatar_url; ava.hidden = false; }
-      if (act) {
-        const game = m && m.game && m.game.name;
-        act.innerHTML = bio + (game ? ` <span class="dim">· играет в ${esc(game)}</span>` : "");
-      }
+      const game = m && m.game && m.game.name;
+      paint(
+        label, ledCls,
+        bio + (game ? ` <span class="dim">· играет в ${esc(game)}</span>` : ""),
+        game ? "играет в " + game : "без активности"
+      );
     } catch (e2) {
-      if (stateEl) stateEl.textContent = "н/д";
-      if (led) led.className = "led";
-      if (act) act.innerHTML = bio;
+      paint("н/д", "", bio, "история недоступна");
     }
   }
 
@@ -791,6 +838,13 @@
     const state = $("#st-state");
     const led = $("#st-led");
     const act = $("#st-activity");
+    const child = (node, name) => {
+      if (!node || !node.children) return "";
+      const n = Array.from(node.children).find(
+        (c) => c.localName.toLowerCase() === name.toLowerCase()
+      );
+      return n ? n.textContent.trim() : "";
+    };
     try {
       let raw = await getText(
         "https://r.jina.ai/" + CONFIG.steam.url + "?xml=1",
@@ -805,34 +859,46 @@
       const doc = new DOMParser().parseFromString(raw, "text/xml");
       if (doc.querySelector("parsererror")) throw new Error("parse");
 
-      const val = (sel) => {
-        const n = doc.querySelector(sel);
-        return n ? n.textContent.trim() : "";
-      };
-
-      const online = val("onlinestate") === "online";
-      const name = val("steamid") || CONFIG.steam.name;
-      const avatar = val("avatarfull") || CONFIG.steam.avatar;
+      const val = (name) => child(doc.documentElement, name);
+      const online = val("onlineState") === "online";
+      const name = val("steamID") || CONFIG.steam.name;
+      const avatar = val("avatarFull") || CONFIG.steam.avatar;
       const since = val("memberSince") || CONFIG.steam.memberSince;
       const location = val("location");
-      const hours2wk = val("hoursPlayed2Wk");
+      const hours2wk = val("hoursPlayed2Wk") || "0.0";
       const msg = val("stateMessage");
-      const game = doc.querySelector("mostPlayedGame");
-      const gameName = game ? (game.querySelector("gameName") || {}).textContent || "" : "";
-      const gameHours = game ? (game.querySelector("hoursOnRecord") || {}).textContent || "" : "";
+
+      const games = Array.from(doc.getElementsByTagName("mostPlayedGame")).slice(0, 6).map((g) => {
+        const gName = child(g, "gameName") || "—";
+        const gHours = child(g, "hoursOnRecord") || "0";
+        const gIcon = child(g, "gameIcon").replace(/^http:/, "https:");
+        return `<span class="st-game">${gIcon ? `<img src="${esc(gIcon)}" alt="" loading="lazy">` : `<span class="st-k">•</span>`}<span>${esc(gName)}</span><b>${esc(gHours)} ч</b></span>`;
+      }).join("") || `<span class="st-line dim">данных об играх нет</span>`;
+
+      const rows = [
+        ["статус", (online ? "в сети" : "не в сети") + (msg ? " · " + msg : "")],
+        ["в Steam с", since],
+        ["локация", location || "—"],
+        ["за 2 нед.", hours2wk + " ч"],
+      ];
 
       $("#st-name").textContent = name;
       $("#st-ava").src = avatar;
-      const lines = [];
-      lines.push(`<span class="st-line">${online ? "в сети" : "не в сети"}${msg && !online ? " · " + esc(msg) : ""} · в Steam с ${esc(since)}</span>`);
-      if (location) lines.push(`<span class="st-line dim">${esc(location)} · ${esc(hours2wk || "0.0")} ч за 2 нед.</span>`);
-      if (gameName) lines.push(`<span class="st-line">топ: ${esc(gameName)}${gameHours ? " — " + esc(gameHours) + " ч" : ""}</span>`);
-      if (act) act.innerHTML = lines.join("");
+      if (act) {
+        act.innerHTML =
+          `<div class="st-grid">${rows.map(([k, v]) => `<span class="st-k">${esc(k)}</span><span class="st-v">${esc(v)}</span>`).join("")}</div>` +
+          `<div class="st-subtitle">топ игр / активность</div>` +
+          `<div class="st-games">${games}</div>`;
+      }
       state.textContent = online ? "online" : "offline";
       led.className = "led " + (online ? "led-on" : "led-off");
     } catch (e) {
       $("#st-name").textContent = CONFIG.steam.name;
-      if (act) act.innerHTML = `<span class="st-line">профиль: ${esc(CONFIG.steam.url.replace("https://", ""))}</span>`;
+      if (act) {
+        act.innerHTML =
+          `<div class="st-grid"><span class="st-k">профиль</span><span class="st-v">${esc(CONFIG.steam.url.replace("https://", ""))}</span></div>` +
+          `<div class="st-line dim">данные Steam временно недоступны</div>`;
+      }
       state.textContent = "н/д";
       led.className = "led";
     }
@@ -861,11 +927,13 @@
       if (f.dataset.src !== src) { f.dataset.src = src; f.src = src; }
     }
     sec.hidden = false;
+    requestAnimationFrame(() => dispatchEvent(new Event("resize")));
   }
 
   function hideLive() {
     const sec = $("#live");
     if (sec) sec.hidden = true;
+    requestAnimationFrame(() => dispatchEvent(new Event("resize")));
   }
 
   async function twitch() {
@@ -1068,19 +1136,30 @@
   /* ============================================================
      SOUNDCLOUD — embed без ключей API (только публичная ссылка)
      ============================================================ */
-  function soundcloud() {
+  async function soundcloud() {
     const url = String((CONFIG.soundcloud && CONFIG.soundcloud.url) || "").trim();
     if (!url) return;
     const card = $("#sc-card");
     if (!card) return;
     card.hidden = false;
     const frame = $("#sc-frame");
-    if (frame) {
-      frame.src = "https://w.soundcloud.com/player/?url=" + encodeURIComponent(url) +
-        "&color=%2339ff88&auto_play=false&show_artwork=true&show_comments=false";
-    }
     const link = $("#sc-link");
     if (link) link.href = url;
+    if (!frame) return;
+
+    // oEmbed отдаёт каноничный widget URL без ключей API и с CORS.
+    let src = "https://w.soundcloud.com/player/?url=" + encodeURIComponent(url) +
+      "&color=%2339ff88&auto_play=false&show_artwork=true&show_comments=false";
+    try {
+      const j = await getJSON(
+        "https://soundcloud.com/oembed?format=json&url=" + encodeURIComponent(url),
+        { timeout: 8000 }
+      );
+      const m = String((j && j.html) || "").match(/src="([^"]+)"/);
+      if (m) src = m[1].replace(/&amp;/g, "&");
+    } catch (e) { /* используем прямой widget URL */ }
+    frame.src = src;
+    requestAnimationFrame(() => dispatchEvent(new Event("resize")));
   }
 
   /* ============================================================

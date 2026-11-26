@@ -104,6 +104,7 @@
         if (!AC) return;
         clickCtx = new AC();
       }
+      if (clickCtx.state === "suspended") clickCtx.resume().catch(() => {});
       const t = clickCtx.currentTime;
       // основной тон + обертон для приятного щелчка
       const osc = clickCtx.createOscillator();
@@ -142,11 +143,11 @@
       const bands = (window.MUSIC.bars || [0, 0, 0, 0, 0]);
       const bars = eq.querySelectorAll(".eq-bar");
       bars.forEach((bar, i) => {
-        const target = Math.max(0.14, Math.min(1, bands[i] || 0));
+        const target = Math.max(0.15, Math.min(1, bands[i] || 0));
         eqSmooth[i] += (target - eqSmooth[i]) * 0.35;
         const h = eqSmooth[i];
-        bar.style.transform = `scaleY(${h.toFixed(3)})`;
-        bar.style.opacity = String((0.45 + 0.55 * h).toFixed(3));
+        bar.style.transform = `scaleX(${h.toFixed(3)})`;
+        bar.style.opacity = String((0.28 + 0.42 * h).toFixed(3));
       });
     } else {
       eq.setAttribute("hidden", "");
@@ -226,6 +227,8 @@
     addEventListener("resize", resize);
   }
 
+  let mx = -100, my = -100, cx = -100, cy = -100, lastSpark = 0;
+
   /* кастомный скроллбар */
   function updateScrollbar() {
     if (!sbWrap || !sbThumb) return;
@@ -234,7 +237,7 @@
     sbWrap.style.opacity = "1";
     const view = innerHeight;
     const total = document.documentElement.scrollHeight;
-    const thumbHeight = Math.max(40, (view / total) * 100);
+    const thumbHeight = Math.max(40, (view / total) * view);
     const scrollPct = window.scrollY / max;
     const trackH = innerHeight;
     const thumbTop = scrollPct * (trackH - thumbHeight);
@@ -242,30 +245,43 @@
     sbThumb.style.top = thumbTop + "px";
   }
 
-  if (sbWrap) {
+  if (sbWrap && sbThumb) {
     addEventListener("scroll", updateScrollbar, { passive: true });
     addEventListener("resize", updateScrollbar, { passive: true });
     let sbDrag = false;
-    sbThumb.addEventListener("pointerdown", (ev) => { sbDrag = true; ev.preventDefault(); });
+    let grabOffset = 0;
+
+    sbThumb.addEventListener("pointerdown", (ev) => {
+      const r = sbThumb.getBoundingClientRect();
+      grabOffset = ev.clientY - r.top;
+      sbDrag = true;
+      try { sbThumb.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      ev.preventDefault();
+    });
     addEventListener("pointermove", (ev) => {
-      if (!sbDrag) return;
+      if (!sbDrag || !(ev.buttons & 1)) return;
       const max = maxScroll();
-      const pct = ev.clientY / innerHeight;
-      window.scrollTo(0, pct * max);
+      const top = ev.clientY - grabOffset;
+      const pct = top / Math.max(1, innerHeight - sbThumb.offsetHeight);
+      window.scrollTo(0, Math.max(0, Math.min(1, pct)) * max);
     }, { passive: true });
-    addEventListener("pointerup", () => { sbDrag = false; });
+    const endDrag = () => { sbDrag = false; };
+    addEventListener("pointerup", endDrag);
+    addEventListener("pointercancel", endDrag);
+    sbThumb.addEventListener("lostpointercapture", endDrag);
     updateScrollbar();
 
     /* искры при движении мыши над скроллбаром и при перетаскивании ползунка */
     function sbSpark(x, y) {
       if (!fine || !opts.particles) return;
       const now = performance.now();
-      if (sparks.length < 20 && now - lastSpark > 15) {
+      if (sparks.length < 24 && now - lastSpark > 18) {
         lastSpark = now;
         sparks.push({
-          x: x, y: y,
-          vx: (Math.random() - 0.5) * 1.0,
-          vy: (Math.random() - 0.5) * 1.0 - 0.2,
+          // сдвигаем влево, чтобы искры не прятались за кольцом курсора
+          x: x - 10, y: y,
+          vx: (Math.random() - 0.5) * 1.4,
+          vy: (Math.random() - 0.5) * 1.4 - 0.35,
           life: 1,
           cyan: Math.random() > 0.5,
         });
@@ -276,18 +292,12 @@
     }, { passive: true });
     addEventListener("scroll", () => {
       if (!fine || !opts.particles) return;
-      const now = performance.now();
-      if (sparks.length < 10 && now - lastSpark > 30) {
-        lastSpark = now;
-        const r = sbThumb.getBoundingClientRect();
-        sbSpark(r.left + r.width / 2, r.top + r.height / 2);
-      }
+      const r = sbThumb.getBoundingClientRect();
+      sbSpark(r.left + r.width + 2, r.top + r.height / 2);
     }, { passive: true });
   }
 
   /* ---------- pointer: cursor ring + sparks ---------- */
-
-  let mx = -100, my = -100, cx = -100, cy = -100, lastSpark = 0;
 
   addEventListener("pointermove", (ev) => {
     if (!fine) return;
@@ -316,7 +326,7 @@
         cyan: Math.random() > 0.65,
       });
     }
-    wake();
+    // Движение мыши не сбрасывает автоскролл — только реальное действие.
   }, { passive: true });
 
   document.addEventListener("pointerleave", () => {
@@ -406,7 +416,7 @@
       s.life -= 0.028;
       if (s.life <= 0) { sparks.splice(i, 1); continue; }
       sctx.beginPath();
-      sctx.arc(s.x, s.y, 1.6 * s.life + 0.4, 0, Math.PI * 2);
+      sctx.arc(s.x, s.y, 2.6 * s.life + 0.6, 0, Math.PI * 2);
       sctx.fillStyle = s.cyan
         ? "rgba(0,229,255," + (s.life * 0.75) + ")"
         : "rgba(180,255,215," + (s.life * 0.85) + ")";
@@ -422,7 +432,9 @@
     const max = maxScroll();
     const idle = now - idleAt > 4000;
 
-    /* автопрокрутка: целевая скорость с плавным разгоном/торможением */
+    /* автопрокрутка: разгон → движение до края → торможение → пауза → разворот */
+    const autoSpeed = 2.2;
+    const brake = Math.min(700, max * 0.25);
     if (opts.auto && idle && max > 0) {
       if (autoPhase === "idle") {
         autoPhase = "accel";
@@ -431,28 +443,33 @@
       }
       if (autoPhase === "accel") {
         const t = Math.min(1, (now - autoPhaseStart) / 900);
-        autoTargetSpeed = ease(t) * 1.2 * autoDir;
+        autoTargetSpeed = ease(t) * autoSpeed * autoDir;
         if (t >= 1) { autoPhase = "cruise"; autoPhaseStart = now; }
       } else if (autoPhase === "cruise") {
-        autoTargetSpeed = 1.2 * autoDir;
-        if (now - autoPhaseStart > 1500) { autoPhase = "decel"; autoPhaseStart = now; }
+        autoTargetSpeed = autoSpeed * autoDir;
+        const left = autoDir > 0 ? max - window.scrollY : window.scrollY;
+        if (left <= brake) { autoPhase = "decel"; autoPhaseStart = now; }
       } else if (autoPhase === "decel") {
-        const t = Math.min(1, (now - autoPhaseStart) / 900);
-        autoTargetSpeed = (1 - ease(t)) * 1.2 * autoDir;
-        if (t >= 1) {
+        const left = Math.max(0, autoDir > 0 ? max - window.scrollY : window.scrollY);
+        // минимальная «ползущая» скорость, чтобы гарантированно дойти до края
+        const k = Math.min(1, left / Math.max(1, brake));
+        autoTargetSpeed = (0.25 + 0.75 * ease(k)) * autoSpeed * autoDir;
+        if (left <= 2) {
+          autoTargetSpeed = 0;
+          autoVel = 0;
+          window.scrollTo(0, autoDir > 0 ? max : 0);
           autoPhase = "pause";
           autoPhaseStart = now;
         }
       } else if (autoPhase === "pause") {
         autoTargetSpeed = 0;
-        if (now - autoPhaseStart > 1500) {
+        if (now - autoPhaseStart > 1400) {
           autoDir = -autoDir;
           autoPhase = "accel";
           autoPhaseStart = now;
         }
       }
-      /* плавное сближение текущей скорости с целевой */
-      autoVel += (autoTargetSpeed - autoVel) * 0.1;
+      autoVel += (autoTargetSpeed - autoVel) * 0.12;
     } else {
       autoTargetSpeed = 0;
     }
@@ -463,8 +480,7 @@
       const next = Math.max(0, Math.min(max, window.scrollY + curVel));
       window.scrollTo(0, next);
       vel *= 0.93;
-      autoVel *= 0.97;
-      if (next <= 0 || next >= max - 1) { vel = 0; autoVel = 0; }
+      if (next <= 0 || next >= max - 1) vel = 0;
     }
 
     const pulse = opts.music ? ((window.MUSIC && window.MUSIC.pulse) || 0) : 0;

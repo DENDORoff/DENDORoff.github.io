@@ -264,7 +264,7 @@
           };
         });
     } catch (e) {
-      if (!/HTTP 404/.test(String(e && e.message))) apiFailed = true;
+      apiFailed = true;
       return [];
     }
   }
