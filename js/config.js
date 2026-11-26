@@ -16,7 +16,7 @@ const CONFIG = {
 
   github: {
     user: "DENDORoff",
-    graphWeeks: 12,
+    graphWeeks: 10,
   },
 
   discord: {
@@ -24,12 +24,15 @@ const CONFIG = {
     user: "1470170052274815171",
     guild: "867681876231979028",
     serverUrl: "https://discord.de-world.net",
+    // Иконка сервера. widget.json не отдаёт иконку сервера — положи реальный
+    // файл в assets/deworld-icon.png и при необходимости измени путь.
+    icon: "assets/deworld-icon.png",
     // Имя в guild widget.json (для поиска твоего аватара/статуса)
     widgetName: "DENDOR",
     // Описание профиля Discord (если активного статуса нет).
     // Поддерживает <a:name:id> / <:name:id> — нарисуются как эмодзи.
     // Пусто → берётся profile.bio.
-    bio: "",
+    bio: "deworld dev",
   },
 
   steam: {
@@ -42,8 +45,7 @@ const CONFIG = {
 
   vk: {
     domain: "deworld_ru",
-    token: "vk1.a.ovN-XPOjJkRt9NX5OaKHKFjXw-sHcVuN2QfJeEgZ8zXRrxrnVOyaqQi6BkfP5SvCfO6-g1iVkQKBrSIfKaqaVh1Ps9b353F30kPW-Hxl4lgKVTo9w2PiGeOrJaXPDuowrJlO3v3DU-NIOSlJhZ9MXt6urk0UOSIHObkas4f55z6VHUH-sSzEJp-2nUjvBhkVeKlfbythi731mD8oHS9ctA",
-    // ⚠️ токен хранится в открытом репозитории — при необходимости регенерируй
+    // Ранее здесь был публичный токен — удалён. ВК-лента не используется.
   },
 
   twitch: {
@@ -65,6 +67,12 @@ const CONFIG = {
 
   weather: {
     city: "Pavlodar", // Kazakhstan
+  },
+
+  // Если есть публичный профиль/плейлист SoundCloud — вставь ссылку сюда,
+  // и карточка с плеером появится автоматически. Без ключей API.
+  soundcloud: {
+    url: "",
   },
 
   music: {

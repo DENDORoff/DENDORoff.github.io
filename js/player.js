@@ -13,7 +13,7 @@
   const AUDIO_RE = /\.(mp3|ogg|oga|wav|m4a|aac|flac)$/i;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  window.MUSIC = window.MUSIC || { pulse: 0, playing: false };
+  window.MUSIC = window.MUSIC || { pulse: 0, playing: false, bars: [0, 0, 0, 0, 0] };
 
   const esc = (s) =>
     String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({
@@ -606,6 +606,17 @@
 
       if (playing) {
         viz.an.getByteFrequencyData(viz.freq);
+        // 5 частотных полос для эквалайзера в шапке
+        const bands = [2, 6, 14, 30, 60];
+        const eqBars = [];
+        for (let b = 0; b < bands.length; b++) {
+          const from = bands[b];
+          const to = b + 1 < bands.length ? bands[b + 1] : bands[b] + 8;
+          let sumB = 0;
+          for (let k = from; k < to && k < viz.freq.length; k++) sumB += viz.freq[k];
+          eqBars.push(Math.min(1, (sumB / Math.max(1, to - from)) / 190));
+        }
+        window.MUSIC.bars = eqBars;
         const bins = 64;
         const gap = 3;
         const bw = Math.max(2, (w - gap * (bins - 1)) / bins);
@@ -629,6 +640,7 @@
         viz.p += (target - viz.p) * 0.2;
       } else {
         viz.p += (0 - viz.p) * 0.1;
+        window.MUSIC.bars = (window.MUSIC.bars || []).map((v) => v * 0.9);
         ctx.strokeStyle = "rgba(57,255,136,0.35)";
         ctx.lineWidth = 1.5;
         ctx.shadowColor = "rgba(57,255,136,0.4)";

@@ -175,48 +175,67 @@
      CLOCKS
      ============================================================ */
   function clocks() {
+    const TZ = "Asia/Almaty";
     const almaty = new Intl.DateTimeFormat("ru-RU", {
-      timeZone: "Asia/Almaty",
+      timeZone: TZ,
       weekday: "long", day: "numeric", month: "long", year: "numeric",
     });
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const timeFmt = new Intl.DateTimeFormat("ru-RU", {
+      timeZone: TZ,
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+    });
+    const partsFmt = new Intl.DateTimeFormat("ru-RU", {
+      timeZone: TZ,
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    });
     const tzEl = $("#clk-tz");
-    if (tzEl) tzEl.textContent = tz;
+    if (tzEl) tzEl.textContent = TZ;
 
     const tick = () => {
       const now = new Date();
-      const almatyTime = new Intl.DateTimeFormat("ru-RU", {
-        timeZone: "Asia/Almaty",
-        hour: "2-digit", minute: "2-digit", second: "2-digit",
-      }).format(now);
-      const hh = String(now.getHours()).padStart(2, "0");
-      const mm = String(now.getMinutes()).padStart(2, "0");
-      const ss = String(now.getSeconds()).padStart(2, "0");
-      const t = `${hh}:${mm}:${ss}`;
+      const t = timeFmt.format(now);
       ["#topclock", "#hero-clock", "#clk-time"].forEach((s) => {
-        const el = $(s); if (el) el.textContent = almatyTime;
+        const el = $(s); if (el) el.textContent = t;
       });
       const d = $("#clk-date"); if (d) d.textContent = almaty.format(now);
       const bar = $("#clk-bar-w");
       if (bar) {
-        const pct = ((now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()) / 86400) * 100;
+        const p = partsFmt.formatToParts(now);
+        const get = (type) => Number((p.find((x) => x.type === type) || {}).value || 0);
+        const pct = ((get("hour") * 3600 + get("minute") * 60 + get("second")) / 86400) * 100;
         bar.style.width = pct.toFixed(2) + "%";
       }
     };
     tick();
     setInterval(tick, 1000);
 
-    /* погода для Павлодара (wttr.in, без ключа) */
+    /* погода Павлодара — Open-Meteo (JSON, без ключа и CORS-проблем) */
     const weatherEl = $("#clk-weather");
     if (weatherEl) {
+      const icon = (code) =>
+        code === 0 ? "☀" :
+        code <= 2 ? "🌤" :
+        code === 3 ? "☁" :
+        code <= 48 ? "🌫" :
+        code <= 67 ? "🌧" :
+        code <= 77 ? "❄" :
+        code <= 82 ? "🌦" :
+        "⛈";
       (async () => {
         try {
-          const text = await getText("https://wttr.in/Pavlodar?format=%t+%c", {
-            headers: { "User-Agent": "Mozilla/5.0" },
-            timeout: 8000,
-          });
-          weatherEl.textContent = text.trim();
-        } catch (e) { /* weather unavailable */ }
+          const j = await getJSON(
+            "https://api.open-meteo.com/v1/forecast?latitude=52.29&longitude=76.96" +
+            "&current=temperature_2m,weather_code&timezone=Asia%2FAlmaty",
+            { timeout: 9000 }
+          );
+          const cur = j && j.current;
+          if (!cur) return;
+          const sign = cur.temperature_2m > 0 ? "+" : "";
+          weatherEl.textContent =
+            `${sign}${Math.round(cur.temperature_2m)}° ${icon(cur.weather_code)} · Павлодар`;
+        } catch (e) {
+          weatherEl.textContent = "погода недоступна";
+        }
       })();
     }
   }
@@ -288,9 +307,10 @@
     /* projects */
     const pr = $("#projects-list");
     if (pr) {
+      const note = `<svg class="proj-icon proj-note" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>`;
       const cards = CONFIG.projects.map((p) => `
         <article class="card reveal">
-          <img class="proj-icon" src="https://cdn.simpleicons.org/${esc(p.icon)}/39ff88" alt="" loading="lazy">
+          ${p.icon === "music" ? note : `<img class="proj-icon" src="https://cdn.simpleicons.org/${esc(p.icon)}/39ff88" alt="" loading="lazy">`}
           <h3 class="proj-title">${esc(p.title)}</h3>
           <p class="proj-desc">${esc(p.desc)}</p>
           <a class="btn btn-solid" href="${esc(p.link)}" target="_blank" rel="noopener">${esc(p.btn)}</a>
@@ -394,29 +414,29 @@
     const ctx = canvas.getContext("2d");
     const dpr = Math.min(devicePixelRatio || 1, 2);
     const pad = 10;
+    const labelH = 18;
     let w = 0, h = 0;
-    let cols = [], rows = [], cell = 0;
+    let cols = [], rows = [], cellW = 0, cellH = 0;
 
     function resize() {
       w = canvas.clientWidth || 300;
-      h = canvas.clientHeight || 160;
+      h = canvas.clientHeight || 200;
       canvas.width = w * dpr;
       canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      // недели по вертикали, дни по горизонтали — растягиваем на всю карточку
-      cell = Math.floor((h - pad * 2) / weeks);
-      if (cell < 4) cell = 4;
-      const gridH = cell * weeks;
-      const startY = Math.max(pad, (h - gridH) / 2);
-      rows = [];
-      for (let w_ = 0; w_ < weeks; w_++) rows.push(startY + w_ * cell);
-      const gap = 2;
-      const availW = w - pad * 2;
-      cell = Math.min(cell, Math.floor((availW - gap * 6) / 7));
-      const gridW = cell * 7 + gap * 6;
-      const startX = Math.max(pad, (w - gridW) / 2);
+      // недели по вертикали, дни по горизонтали. Ширина и высота ячейки
+      // считаются отдельно, чтобы график заполнял всю карточку.
+      const gapX = 3, gapY = 2;
+      cellW = Math.max(6, Math.floor((w - pad * 2 - gapX * 6) / 7));
+      cellH = Math.max(4, Math.floor((h - pad * 2 - labelH - gapY * (weeks - 1)) / weeks));
+      const gridW = cellW * 7 + gapX * 6;
+      const gridH = cellH * weeks + gapY * (weeks - 1);
+      const startX = Math.max(2, (w - gridW) / 2);
+      const startY = Math.max(2, (h - labelH - gridH) / 2);
       cols = [];
-      for (let d_ = 0; d_ < 7; d_++) cols.push(startX + d_ * (cell + gap));
+      rows = [];
+      for (let d_ = 0; d_ < 7; d_++) cols.push(startX + d_ * (cellW + gapX));
+      for (let w_ = 0; w_ < weeks; w_++) rows.push(startY + w_ * (cellH + gapY));
     }
 
     function levelColor(v) {
@@ -438,7 +458,7 @@
           const idx = days - 1 - (w_ * 7 + d_);
           const v = idx >= 0 && idx < days ? data[idx] || 0 : 0;
           ctx.fillStyle = levelColor(v);
-          ctx.fillRect(cols[d_], rows[w_], cell, cell);
+          ctx.fillRect(cols[d_], rows[w_], cellW, cellH);
         }
       }
 
@@ -446,7 +466,7 @@
       const dayNames = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
       for (let d_ = 0; d_ < 7; d_++) {
         ctx.fillStyle = "rgba(57,255,136,0.4)";
-        ctx.fillText(dayNames[d_], cols[d_] + cell / 2, rows[weeks - 1] + cell + 12);
+        ctx.fillText(dayNames[d_], cols[d_] + cellW / 2, rows[weeks - 1] + cellH + 11);
       }
     }
 
@@ -578,8 +598,9 @@
       if (inv && w.instant_invite) inv.href = w.instant_invite;
 
       const iconEl = $("#dsc-icon");
-      if (iconEl && w.icon) {
-        iconEl.src = `https://cdn.discordapp.com/icons/${guild}/${w.icon}.png?size=64`;
+      if (iconEl) {
+        iconEl.onerror = () => { iconEl.hidden = true; };
+        iconEl.src = CONFIG.discord.icon;
         iconEl.hidden = false;
       }
 
@@ -594,6 +615,8 @@
       if (onlineEl) onlineEl.textContent = "н/д";
       const inv = $("#dsc-invite");
       if (inv) inv.href = serverUrl;
+      const iconEl = $("#dsc-icon");
+      if (iconEl && CONFIG.discord.icon) { iconEl.src = CONFIG.discord.icon; iconEl.hidden = false; }
     }
   }
 
@@ -684,7 +707,10 @@
       if (stateEl) stateEl.textContent = label;
       if (led) led.className = "led " + ledCls;
       if (m && m.avatar_url && ava) { ava.src = m.avatar_url; ava.hidden = false; }
-      if (act) act.innerHTML = bio;
+      if (act) {
+        const game = m && m.game && m.game.name;
+        act.innerHTML = bio + (game ? ` <span class="dim">· играет в ${esc(game)}</span>` : "");
+      }
     } catch (e2) {
       if (stateEl) stateEl.textContent = "н/д";
       if (led) led.className = "led";
@@ -766,11 +792,17 @@
     const led = $("#st-led");
     const act = $("#st-activity");
     try {
-      const xml = await getText(
+      let raw = await getText(
         "https://r.jina.ai/" + CONFIG.steam.url + "?xml=1",
         { headers: { "x-return-format": "html" }, timeout: 15000 }
       );
-      const doc = new DOMParser().parseFromString(xml, "text/xml");
+      // r.jina.ai добавляет служебный текст перед XML — вырезаем сам профиль
+      const start = raw.indexOf("<?xml");
+      const end = raw.lastIndexOf("</profile>");
+      if (start < 0 || end < 0) throw new Error("no profile xml");
+      raw = raw.slice(start, end + "</profile>".length);
+
+      const doc = new DOMParser().parseFromString(raw, "text/xml");
       if (doc.querySelector("parsererror")) throw new Error("parse");
 
       const val = (sel) => {
@@ -782,17 +814,25 @@
       const name = val("steamid") || CONFIG.steam.name;
       const avatar = val("avatarfull") || CONFIG.steam.avatar;
       const since = val("memberSince") || CONFIG.steam.memberSince;
-      const lastSeen = val("lastseentime") || "";
+      const location = val("location");
+      const hours2wk = val("hoursPlayed2Wk");
+      const msg = val("stateMessage");
+      const game = doc.querySelector("mostPlayedGame");
+      const gameName = game ? (game.querySelector("gameName") || {}).textContent || "" : "";
+      const gameHours = game ? (game.querySelector("hoursOnRecord") || {}).textContent || "" : "";
 
       $("#st-name").textContent = name;
       $("#st-ava").src = avatar;
-      const actText = (online ? "в сети" : "не в сети") + " • в Steam с " + since;
-      act.textContent = lastSeen ? actText + " • última: " + lastSeen : actText;
+      const lines = [];
+      lines.push(`<span class="st-line">${online ? "в сети" : "не в сети"}${msg && !online ? " · " + esc(msg) : ""} · в Steam с ${esc(since)}</span>`);
+      if (location) lines.push(`<span class="st-line dim">${esc(location)} · ${esc(hours2wk || "0.0")} ч за 2 нед.</span>`);
+      if (gameName) lines.push(`<span class="st-line">топ: ${esc(gameName)}${gameHours ? " — " + esc(gameHours) + " ч" : ""}</span>`);
+      if (act) act.innerHTML = lines.join("");
       state.textContent = online ? "online" : "offline";
       led.className = "led " + (online ? "led-on" : "led-off");
     } catch (e) {
       $("#st-name").textContent = CONFIG.steam.name;
-      act.textContent = "профиль: " + CONFIG.steam.url.replace("https://", "");
+      if (act) act.innerHTML = `<span class="st-line">профиль: ${esc(CONFIG.steam.url.replace("https://", ""))}</span>`;
       state.textContent = "н/д";
       led.className = "led";
     }
@@ -1026,6 +1066,24 @@
   }
 
   /* ============================================================
+     SOUNDCLOUD — embed без ключей API (только публичная ссылка)
+     ============================================================ */
+  function soundcloud() {
+    const url = String((CONFIG.soundcloud && CONFIG.soundcloud.url) || "").trim();
+    if (!url) return;
+    const card = $("#sc-card");
+    if (!card) return;
+    card.hidden = false;
+    const frame = $("#sc-frame");
+    if (frame) {
+      frame.src = "https://w.soundcloud.com/player/?url=" + encodeURIComponent(url) +
+        "&color=%2339ff88&auto_play=false&show_artwork=true&show_comments=false";
+    }
+    const link = $("#sc-link");
+    if (link) link.href = url;
+  }
+
+  /* ============================================================
      INIT
      ============================================================ */
   renderStatic();
@@ -1045,6 +1103,7 @@
   steam();
   twitch();
   youtube();
+  soundcloud();
 
   /* блокировка контекстного меню ПКМ */
   document.addEventListener("contextmenu", (ev) => ev.preventDefault());

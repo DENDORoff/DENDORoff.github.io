@@ -130,7 +130,8 @@
   document.addEventListener("click", clickSound, true);
   document.addEventListener("contextmenu", clickSound, true);
 
-  /* ---------- эквалайзер в шапке: реально зависит от музыки ---------- */
+  /* ---------- эквалайзер в шапке: реальные частотные данные плеера ---------- */
+  const eqSmooth = [0, 0, 0, 0, 0];
   function updateEq() {
     const eq = document.getElementById("top-eq");
     if (!eq) return;
@@ -138,17 +139,19 @@
     if (playing) {
       eq.removeAttribute("hidden");
       document.body.classList.add("fx-eq");
-      const pulse = (window.MUSIC.pulse || 0);
+      const bands = (window.MUSIC.bars || [0, 0, 0, 0, 0]);
       const bars = eq.querySelectorAll(".eq-bar");
       bars.forEach((bar, i) => {
-        const base = 0.3 + 0.4 * Math.sin(i * 0.7 + Date.now() * 0.003);
-        const h = Math.max(0.2, Math.min(1, base + pulse * 0.8));
-        bar.style.transform = `scaleY(${h})`;
-        bar.style.opacity = String(0.4 + 0.6 * h);
+        const target = Math.max(0.14, Math.min(1, bands[i] || 0));
+        eqSmooth[i] += (target - eqSmooth[i]) * 0.35;
+        const h = eqSmooth[i];
+        bar.style.transform = `scaleY(${h.toFixed(3)})`;
+        bar.style.opacity = String((0.45 + 0.55 * h).toFixed(3));
       });
     } else {
       eq.setAttribute("hidden", "");
       document.body.classList.remove("fx-eq");
+      eqSmooth.forEach((_, i) => { eqSmooth[i] *= 0.9; });
     }
   }
   setInterval(updateEq, 50);
@@ -290,7 +293,13 @@
     if (!fine) return;
     mx = ev.clientX;
     my = ev.clientY;
-    if (cursor && opts.particles) cursor.classList.add("on");
+    if (cursor && opts.particles) {
+      cursor.classList.add("on");
+      // обновляем сразу, не дожидаясь цикла — курсор никогда не «зависает»
+      cursor.style.transform =
+        "translate3d(" + mx + "px," + my + "px,0) translate(-50%,-50%)";
+      cx = mx; cy = my;
+    }
     if (cursor) {
       const el = ev.target;
       const hot = el && el.closest && el.closest("a, button, input, label, .pl-item, .fx-row");
@@ -321,7 +330,7 @@
   let idleAt = performance.now();
   let autoDir = 1; // 1 = вниз, -1 = вверх
   let autoPhase = "idle"; // idle, accel, cruise, decel, pause
-  let autoSpeed = 0;
+  let autoTargetSpeed = 0;
   let autoPhaseStart = 0;
 
   function wake() { idleAt = performance.now(); autoPhase = "idle"; autoVel = 0; }
@@ -408,13 +417,12 @@
   function loop(now) {
     requestAnimationFrame(loop);
     if (document.hidden) return;
-
+    try {
     /* scroll physics */
     const max = maxScroll();
     const idle = now - idleAt > 4000;
 
     /* автопрокрутка: целевая скорость с плавным разгоном/торможением */
-    let autoSpeed = 0;
     if (opts.auto && idle && max > 0) {
       if (autoPhase === "idle") {
         autoPhase = "accel";
@@ -472,6 +480,10 @@
 
     drawDots(pulse);
     drawSparks();
+    } catch (err) {
+      /* один сбой не должен ронять весь цикл эффектов */
+      if (window.console && console.warn) console.warn("[fx] loop:", err);
+    }
   }
 
   requestAnimationFrame(loop);
