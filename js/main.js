@@ -361,7 +361,7 @@
   }
 
   /* ============================================================
-     GITHUB — вертикальный график активности + последнее действие
+     GITHUB — календарь: месяцы сверху, дни недели слева, 52 недели
      ============================================================ */
   async function githubGraph() {
     const canvas = $("#gh-graph");
@@ -388,16 +388,16 @@
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const counts = new Array(days).fill(0);
+    const counts = new Map();
     for (const e of events) {
       const d = new Date(e.created_at);
       d.setHours(0, 0, 0, 0);
       const diff = Math.round((today - d) / 86400000);
-      const idx = days - 1 - diff;
-      if (idx >= 0 && idx < days) counts[idx]++;
+      if (diff >= 0 && diff < days) counts.set(diff, (counts.get(diff) || 0) + 1);
     }
-    const total = counts.reduce((a, b) => a + b, 0);
-    if (totalEl) totalEl.textContent = `${total} событий / ${weeks} нед.`;
+    let total = 0;
+    counts.forEach((v) => { total += v; });
+    if (totalEl) totalEl.textContent = `${total} событий за ${weeks} недели`;
 
     // последнее действие
     if (lastEl && events.length) {
@@ -413,7 +413,7 @@
         const repo = (ev.repo && ev.repo.name) || "репозиторий";
         action = `${d} в ${t} — запушил в ${repo}`;
       } else if (ev.type === "CreateEvent") {
-        action = `${d} в ${t} — создал ${ev.payload && ev.payload.ref_type || "объект"}`;
+        action = `${d} в ${t} — создал ${(ev.payload && ev.payload.ref_type) || "объект"}`;
       } else if (ev.type === "IssuesEvent") {
         action = `${d} в ${t} — комментарий к issue`;
       } else if (ev.type === "PullRequestEvent") {
@@ -426,30 +426,17 @@
 
     const ctx = canvas.getContext("2d");
     const dpr = Math.min(devicePixelRatio || 1, 2);
-    const pad = 10;
-    const labelH = 18;
+    const months = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+    const weekdays = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
+    const dow = (today.getDay() + 6) % 7; // понедельник = 0
     let w = 0, h = 0;
-    let cols = [], rows = [], cellW = 0, cellH = 0;
 
     function resize() {
       w = canvas.clientWidth || 300;
       h = canvas.clientHeight || 200;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      // недели по вертикали, дни по горизонтали. Ширина и высота ячейки
-      // считаются отдельно, чтобы график заполнял всю карточку.
-      const gapX = 3, gapY = 2;
-      cellW = Math.max(6, Math.floor((w - pad * 2 - gapX * 6) / 7));
-      cellH = Math.max(4, Math.floor((h - pad * 2 - labelH - gapY * (weeks - 1)) / weeks));
-      const gridW = cellW * 7 + gapX * 6;
-      const gridH = cellH * weeks + gapY * (weeks - 1);
-      const startX = Math.max(2, (w - gridW) / 2);
-      const startY = Math.max(2, (h - labelH - gridH) / 2);
-      cols = [];
-      rows = [];
-      for (let d_ = 0; d_ < 7; d_++) cols.push(startX + d_ * (cellW + gapX));
-      for (let w_ = 0; w_ < weeks; w_++) rows.push(startY + w_ * (cellH + gapY));
     }
 
     function levelColor(v) {
@@ -460,32 +447,65 @@
       return "#39ff88";
     }
 
-    function draw(data) {
-      data = data || counts;
+    function mondayOf(col) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - dow - (weeks - 1 - col) * 7);
+      return d;
+    }
+
+    function draw() {
       ctx.clearRect(0, 0, w, h);
-      ctx.font = "10px monospace";
+      const gap = w < 420 ? 1 : 2;
+      const left = w < 420 ? 24 : 30;
+      const cellW = Math.max(3, Math.floor((w - left - 8 - gap * (weeks - 1)) / weeks));
+      const cellH = Math.max(8, Math.min(28, Math.floor((h - 26 - 6 - gap * 6) / 7)));
+      const gridW = cellW * weeks + gap * (weeks - 1);
+      const gridH = cellH * 7 + gap * 6;
+      const gridX = left + Math.max(0, (w - left - gridW) / 2);
+      const gridY = Math.max(24, Math.floor((h - gridH) / 2) + 8);
+
+      ctx.font = "9px monospace";
       ctx.textBaseline = "middle";
 
-      for (let w_ = 0; w_ < weeks; w_++) {
-        for (let d_ = 0; d_ < 7; d_++) {
-          const idx = days - 1 - (w_ * 7 + d_);
-          const v = idx >= 0 && idx < days ? data[idx] || 0 : 0;
-          ctx.fillStyle = levelColor(v);
-          ctx.fillRect(cols[d_], rows[w_], cellW, cellH);
+      // день недели | график
+      ctx.textAlign = "right";
+      weekdays.forEach((name, r) => {
+        ctx.fillStyle = "rgba(150,180,165,0.8)";
+        ctx.fillText(name, gridX - 6, gridY + r * (cellH + gap) + cellH / 2);
+      });
+
+      // месяц | месяц | месяц
+      ctx.textAlign = "left";
+      let lastMonth = -1;
+      let lastMonthX = -Infinity;
+      for (let col = 0; col < weeks; col++) {
+        const monday = mondayOf(col);
+        const month = monday.getMonth();
+        const x = gridX + col * (cellW + gap);
+        if (col === 0 || month !== lastMonth) {
+          if (lastMonthX === -Infinity || x - lastMonthX >= 26) {
+            ctx.fillStyle = "rgba(0,229,255,0.8)";
+            ctx.fillText(months[month], x, gridY - 10);
+            lastMonthX = x;
+          }
+          lastMonth = month;
+        }
+
+        for (let row = 0; row < 7; row++) {
+          const date = new Date(monday);
+          date.setDate(monday.getDate() + row);
+          const diff = Math.round((today - date) / 86400000);
+          const v = diff >= 0 && diff < days ? (counts.get(diff) || 0) : -1;
+          ctx.fillStyle = v < 0 ? "rgba(16,32,27,0.35)" : levelColor(v);
+          ctx.fillRect(x, gridY + row * (cellH + gap), cellW, cellH);
         }
       }
-
-      // по дням недели снизу
-      const dayNames = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
-      for (let d_ = 0; d_ < 7; d_++) {
-        ctx.fillStyle = "rgba(57,255,136,0.4)";
-        ctx.fillText(dayNames[d_], cols[d_] + cellW / 2, rows[weeks - 1] + cellH + 11);
-      }
+      ctx.textAlign = "left";
     }
 
     resize();
-    draw(counts);
-    const redraw = () => { resize(); draw(counts); };
+    draw();
+    const redraw = () => { resize(); draw(); };
     if ("ResizeObserver" in window) {
       new ResizeObserver(redraw).observe(canvas);
     } else {
@@ -670,11 +690,11 @@
       idle: ["ожидание", "led-blink"],
       dnd: ["не беспокоить", "led-off"],
       invisible: ["скрыт", ""],
-      offline: ["офлайн", "led-off"],
+      offline: ["оффлайн", "led-off"],
     };
     const widgetName = CONFIG.discord.widgetName || CONFIG.discord.tag;
     const bio = renderEmoji(CONFIG.discord.bio || CONFIG.profile.bio);
-    const HISTORY_KEY = "bio:discord:history";
+    const HISTORY_KEY = "bio:discord:games";
 
     function loadHistory() {
       try {
@@ -682,35 +702,54 @@
         return Array.isArray(h) ? h : [];
       } catch (e) { return []; }
     }
-    function appendHistory(label, activity) {
+
+    // в истории только игры — статусы и био сюда не попадают
+    function appendGame(name) {
+      const clean = String(name || "").trim();
+      if (!clean) return loadHistory();
+      const h = loadHistory();
       const now = Date.now();
-      const sig = label + "|" + activity;
-      let h = loadHistory();
-      if (!h.length || h[0].sig !== sig || now - h[0].ts > 30 * 60 * 1000) {
-        h.unshift({ ts: now, sig, label, activity });
-        h = h.slice(0, 3);
-        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(h)); } catch (e) { /* private */ }
+      if (!h.length || h[0].name !== clean || now - h[0].ts > 30 * 60 * 1000) {
+        h.unshift({ ts: now, name: clean });
+        const seen = new Set();
+        const unique = h.filter((x) => {
+          if (seen.has(x.name)) return false;
+          seen.add(x.name);
+          return true;
+        });
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(unique.slice(0, 5))); }
+        catch (e) { /* private mode */ }
+        return unique.slice(0, 5);
       }
       return h;
     }
-    function paint(label, ledCls, activityHtml, activityText) {
+
+    function logTime(ts) {
+      const d = new Date(ts);
+      const now = new Date();
+      const time = d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+      if (d.toDateString() === now.toDateString()) return time;
+      return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" }) + " " + time;
+    }
+
+    function paint(label, ledCls, activityHtml, gameName) {
       if (stateEl) stateEl.textContent = label;
       if (led) led.className = "led " + ledCls;
       if (act) act.innerHTML = activityHtml || bio;
       if (!detail) return;
-      const h = appendHistory(label, activityText || "");
+      const h = appendGame(gameName);
       const items = h.length
         ? h.map((x) =>
-            `<span class="dsc-log-item"><time>${esc(new Date(x.ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }))}</time>${esc(x.label)}${x.activity ? " · " + esc(x.activity) : ""}</span>`
+            `<span class="dsc-log-item"><time>${esc(logTime(x.ts))}</time>${esc(x.name)}</span>`
           ).join("")
-        : `<span class="dsc-log-item">наблюдений пока нет</span>`;
+        : `<span class="dsc-log-item">игр пока не видно</span>`;
       detail.innerHTML =
-        `<div class="dsc-detail-row"><span class="dsc-k">сейчас</span><span class="dsc-v">${esc(label)}${activityText ? " · " + esc(activityText) : ""}</span></div>` +
-        `<div class="dsc-detail-row"><span class="dsc-k">история</span><span class="dsc-v dsc-log">${items}</span></div>` +
-        `<div class="dsc-note">локальные наблюдения на этом устройстве</div>`;
+        `<div class="dsc-detail-row"><span class="dsc-k">сейчас</span><span class="dsc-v">${gameName ? esc(gameName) : "не в игре"}</span></div>` +
+        `<div class="dsc-detail-row"><span class="dsc-k">играл</span><span class="dsc-v dsc-log">${items}</span></div>` +
+        `<div class="dsc-note">замечено на этом устройстве</div>`;
     }
 
-    /* 1) Lanyard — живые данные: аним. аватар, рамка, активности */
+    /* 1) Lanyard — живые данные: аним. аватар, рамка, текущая игра */
     try {
       const j = await getJSON(`https://api.lanyard.rest/v1/users/${CONFIG.discord.user}`, { timeout: 8000 });
       if (!j || !j.success || !j.data) throw new Error("no data");
@@ -727,26 +766,27 @@
         setDeco(deco, du.id, du.avatar_decoration_data.asset);
       }
 
-      const custom = (d.activities || []).find((a) => a.type === 4 && (a.state || a.name));
-      const game = (d.activities || []).find((a) => a.type !== 4 && a.type !== 3 && (a.name || a.details));
+      const activities = d.activities || [];
+      const game = activities.find((a) => a.type === 0 && (a.name || a.details));
+      const custom = activities.find((a) => a.type === 4 && (a.state || a.name));
+      const spotify = d.listening_to_spotify && d.spotify;
       let html = "";
-      let activityText = "";
-      if (custom) {
+      let gameName = "";
+      if (game) {
+        gameName = game.name || "";
+        html = `<span class="dim">в игре</span> · ${renderEmoji(gameName)}`;
+      } else if (custom) {
         const emoji = statusEmoji(custom.emoji);
-        activityText = custom.state || custom.name || "";
-        html = emoji + (custom.state ? (emoji ? " " : "") + renderEmoji(custom.state) : renderEmoji(custom.name || ""));
-      } else if (d.listening_to_spotify && d.spotify) {
-        activityText = `${d.spotify.artist_name || d.spotify.artist} — ${d.spotify.track}`;
-        html = `♪ ${esc(activityText)}`;
-      } else if (game) {
-        activityText = game.name || "";
-        html = renderEmoji(activityText) + (game.details ? " — " + renderEmoji(game.details) : "");
+        const text = custom.state || custom.name || "";
+        html = emoji + (emoji && text ? " " : "") + renderEmoji(text);
+      } else if (spotify) {
+        html = `♪ ${esc((spotify.artist_name || spotify.artist) + " — " + spotify.track)}`;
       }
-      paint(label, ledCls, html || bio, activityText);
+      paint(label, ledCls, html || bio, gameName);
       return;
     } catch (e) { /* нет Lanyard → widget ниже */ }
 
-    /* 2) Guild widget — статик-аватар + presence + био */
+    /* 2) Guild widget — статик-аватар + presence + игра */
     try {
       const w = await getJSON(`https://discord.com/api/guilds/${CONFIG.discord.guild}/widget.json`, { timeout: 9000 });
       const m = (w.members || []).find(
@@ -754,14 +794,14 @@
       );
       const [label, ledCls] = map[(m && m.status) || "offline"] || ["н/д", ""];
       if (m && m.avatar_url && ava) { ava.src = m.avatar_url; ava.hidden = false; }
-      const game = m && m.game && m.game.name;
+      const gameName = (m && m.game && m.game.name) || "";
       paint(
         label, ledCls,
-        bio + (game ? ` <span class="dim">· играет в ${esc(game)}</span>` : ""),
-        game ? "играет в " + game : "без активности"
+        gameName ? `<span class="dim">в игре</span> · ${esc(gameName)}` : bio,
+        gameName
       );
     } catch (e2) {
-      paint("н/д", "", bio, "история недоступна");
+      paint("н/д", "", bio, "");
     }
   }
 
@@ -837,6 +877,7 @@
   async function steam() {
     const state = $("#st-state");
     const led = $("#st-led");
+    const meta = $("#st-meta");
     const act = $("#st-activity");
     const child = (node, name) => {
       if (!node || !node.children) return "";
@@ -845,6 +886,40 @@
       );
       return n ? n.textContent.trim() : "";
     };
+
+    const months = {
+      jan: "янв", feb: "фев", mar: "мар", apr: "апр", may: "май", jun: "июн",
+      jul: "июл", aug: "авг", sep: "сен", oct: "окт", nov: "ноя", dec: "дек",
+    };
+    const shortDate = (value) => {
+      const s = String(value || "").trim();
+      const m = s.match(/([A-Za-zА-Яа-я]+)\s+(\d{1,2}),?\s+(\d{2,4})/);
+      if (m) {
+        const mon = months[m[1].slice(0, 3).toLowerCase()] || m[1];
+        const yy = m[3].length === 4 ? m[3].slice(2) : m[3];
+        return `${String(m[2]).padStart(2, "0")} ${mon} ${yy}`;
+      }
+      const n = s.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{2,4})$/);
+      if (n) {
+        const yy = n[3].length === 4 ? n[3].slice(2) : n[3];
+        return `${n[1].padStart(2, "0")}.${n[2].padStart(2, "0")}.${yy}`;
+      }
+      return s;
+    };
+    const shortPlace = {
+      pavlodar: "Павлодар", moscow: "Москва", "saint petersburg": "СПб",
+      kazakhstan: "Казахстан", russia: "Россия", ukraine: "Украина",
+    };
+    const shortLocation = (value) => {
+      const first = String(value || "").split(",")[0].trim();
+      return shortPlace[first.toLowerCase()] || first;
+    };
+    const hours = (value) => {
+      const n = parseFloat(value);
+      if (!Number.isFinite(n)) return String(value || "0");
+      return n % 1 === 0 ? String(n) : n.toFixed(1);
+    };
+
     try {
       let raw = await getText(
         "https://r.jina.ai/" + CONFIG.steam.url + "?xml=1",
@@ -860,47 +935,63 @@
       if (doc.querySelector("parsererror")) throw new Error("parse");
 
       const val = (name) => child(doc.documentElement, name);
-      const online = val("onlineState") === "online";
+      const stateRaw = val("onlineState").toLowerCase();
+      const msg = val("stateMessage");
+      const online = stateRaw === "online" || stateRaw === "in-game";
+      const inGame = stateRaw === "in-game" || /\b(in-game|playing|в игре)\b/i.test(msg);
       const name = val("steamID") || CONFIG.steam.name;
       const avatar = val("avatarFull") || CONFIG.steam.avatar;
-      const since = val("memberSince") || CONFIG.steam.memberSince;
-      const location = val("location");
-      const hours2wk = val("hoursPlayed2Wk") || "0.0";
-      const msg = val("stateMessage");
 
-      const games = Array.from(doc.getElementsByTagName("mostPlayedGame")).slice(0, 6).map((g) => {
-        const gName = child(g, "gameName") || "—";
-        const gHours = child(g, "hoursOnRecord") || "0";
-        const gIcon = child(g, "gameIcon").replace(/^http:/, "https:");
-        return `<span class="st-game">${gIcon ? `<img src="${esc(gIcon)}" alt="" loading="lazy">` : `<span class="st-k">•</span>`}<span>${esc(gName)}</span><b>${esc(gHours)} ч</b></span>`;
-      }).join("") || `<span class="st-line dim">данных об играх нет</span>`;
+      const games = Array.from(doc.getElementsByTagName("mostPlayedGame")).map((g) => ({
+        name: child(g, "gameName") || "—",
+        hours: child(g, "hoursOnRecord") || "0",
+        icon: child(g, "gameIcon").replace(/^http:/, "https:"),
+      }));
 
-      const rows = [
-        ["статус", (online ? "в сети" : "не в сети") + (msg ? " · " + msg : "")],
-        ["в Steam с", since],
-        ["локация", location || "—"],
-        ["за 2 нед.", hours2wk + " ч"],
-      ];
-
-      $("#st-name").textContent = name;
-      $("#st-ava").src = avatar;
-      if (act) {
-        act.innerHTML =
-          `<div class="st-grid">${rows.map(([k, v]) => `<span class="st-k">${esc(k)}</span><span class="st-v">${esc(v)}</span>`).join("")}</div>` +
-          `<div class="st-subtitle">топ игр / активность</div>` +
-          `<div class="st-games">${games}</div>`;
+      let current = "";
+      if (inGame) {
+        current = msg.replace(/^(in-game|playing|играет в|в игре)\s*:?\s*/i, "").trim();
+        if (!current || /^online$/i.test(current)) current = games[0] && games[0].name;
       }
-      state.textContent = online ? "online" : "offline";
-      led.className = "led " + (online ? "led-on" : "led-off");
+
+      const rows = [];
+      if (current) {
+        rows.push(
+          `<span class="st-game"><span class="st-k">▸</span><span>${esc(current)}</span><b>сейчас</b></span>`
+        );
+      }
+      games.filter((g) => g.name !== current).slice(0, 4).forEach((g) => {
+        const icon = g.icon
+          ? `<img src="${esc(g.icon)}" alt="" loading="lazy">`
+          : `<span class="st-k">•</span>`;
+        rows.push(
+          `<span class="st-game">${icon}<span>${esc(g.name)}</span><b>${esc(hours(g.hours))} ч</b></span>`
+        );
+      });
+
+      const since = shortDate(val("memberSince") || CONFIG.steam.memberSince);
+      const place = shortLocation(val("location"));
+      const metaText = [since ? `в Steam с ${since}` : "", place].filter(Boolean).join(" · ");
+
+      const nameEl = $("#st-name");
+      const avaEl = $("#st-ava");
+      if (nameEl) nameEl.textContent = name;
+      if (avaEl) avaEl.src = avatar;
+      if (meta) meta.textContent = metaText || CONFIG.steam.url.replace(/^https?:\/\//, "");
+      if (act) {
+        act.innerHTML = rows.join("") || `<span class="user-activity">активность пока не видна</span>`;
+      }
+      if (state) state.textContent = inGame ? "в игре" : online ? "онлайн" : "оффлайн";
+      if (led) led.className = "led " + (inGame ? "led-blink" : online ? "led-on" : "led-off");
     } catch (e) {
-      $("#st-name").textContent = CONFIG.steam.name;
+      const nameEl = $("#st-name");
+      if (nameEl) nameEl.textContent = CONFIG.steam.name;
+      if (meta) meta.textContent = "профиль Steam временно недоступен";
       if (act) {
-        act.innerHTML =
-          `<div class="st-grid"><span class="st-k">профиль</span><span class="st-v">${esc(CONFIG.steam.url.replace("https://", ""))}</span></div>` +
-          `<div class="st-line dim">данные Steam временно недоступны</div>`;
+        act.innerHTML = `<span class="user-activity">открой профиль напрямую, чтобы посмотреть игры</span>`;
       }
-      state.textContent = "н/д";
-      led.className = "led";
+      if (state) state.textContent = "н/д";
+      if (led) led.className = "led";
     }
   }
 
@@ -1134,35 +1225,6 @@
   }
 
   /* ============================================================
-     SOUNDCLOUD — embed без ключей API (только публичная ссылка)
-     ============================================================ */
-  async function soundcloud() {
-    const url = String((CONFIG.soundcloud && CONFIG.soundcloud.url) || "").trim();
-    if (!url) return;
-    const card = $("#sc-card");
-    if (!card) return;
-    card.hidden = false;
-    const frame = $("#sc-frame");
-    const link = $("#sc-link");
-    if (link) link.href = url;
-    if (!frame) return;
-
-    // oEmbed отдаёт каноничный widget URL без ключей API и с CORS.
-    let src = "https://w.soundcloud.com/player/?url=" + encodeURIComponent(url) +
-      "&color=%2339ff88&auto_play=false&show_artwork=true&show_comments=false";
-    try {
-      const j = await getJSON(
-        "https://soundcloud.com/oembed?format=json&url=" + encodeURIComponent(url),
-        { timeout: 8000 }
-      );
-      const m = String((j && j.html) || "").match(/src="([^"]+)"/);
-      if (m) src = m[1].replace(/&amp;/g, "&");
-    } catch (e) { /* используем прямой widget URL */ }
-    frame.src = src;
-    requestAnimationFrame(() => dispatchEvent(new Event("resize")));
-  }
-
-  /* ============================================================
      INIT
      ============================================================ */
   renderStatic();
@@ -1182,7 +1244,6 @@
   steam();
   twitch();
   youtube();
-  soundcloud();
 
   /* блокировка контекстного меню ПКМ */
   document.addEventListener("contextmenu", (ev) => ev.preventDefault());

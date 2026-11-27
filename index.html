@@ -22,7 +22,7 @@
   <meta http-equiv="X-Content-Type-Options" content="nosniff">
 
   <link rel="preload" href="fonts/JetBrainsMono-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/style.css?v=9">
+  <link rel="stylesheet" href="css/style.css?v=10">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23050608'/><text x='2' y='12' font-family='monospace' font-size='11' fill='%2339ff88'>D_</text></svg>">
   <script>
     /* frame-buster: GitHub Pages не отдаёт X-Frame-Options */
@@ -67,7 +67,6 @@
       <span id="top-prog"></span>
     </div>
     <div class="top-eq" id="top-eq" aria-hidden="true">
-      <span class="eq-bar"></span>
       <span class="eq-bar"></span>
       <span class="eq-bar"></span>
       <span class="eq-bar"></span>
@@ -270,7 +269,7 @@
             <span class="w-title">github --activity</span>
             <span class="w-status" id="gh-total">…</span>
           </header>
-          <canvas id="gh-graph" class="gh-graph" height="460"></canvas>
+          <canvas id="gh-graph" class="gh-graph" height="260"></canvas>
           <div id="gh-last" class="gh-last"></div>
           <div class="graph-legend">
             <span>меньше</span>
@@ -325,35 +324,44 @@
         <article class="card soft w-user reveal">
           <header class="w-head">
             <span class="w-title">discord --me</span>
-            <span class="w-status" id="lan-state">подключение…</span>
           </header>
-          <div class="user-body">
-            <span class="ava-wrap">
-              <img class="user-ava" id="lan-ava" alt="" hidden>
-              <img class="ava-deco" id="lan-deco" alt="" hidden>
-            </span>
-            <div>
-              <div class="user-name">dendoroff</div>
-              <div class="user-activity" id="lan-activity">статус недоступен</div>
+          <div class="user-body user-body-stack">
+            <div class="user-head">
+              <span class="ava-wrap">
+                <img class="user-ava" id="lan-ava" alt="" hidden>
+                <img class="ava-deco" id="lan-deco" alt="" hidden>
+              </span>
+              <div class="user-info">
+                <div class="user-name-row">
+                  <span class="user-name">dendoroff</span>
+                  <span class="user-state"><span class="led" id="lan-led"></span><span id="lan-state">подключение…</span></span>
+                </div>
+                <div class="user-activity" id="lan-activity">статус недоступен</div>
+              </div>
             </div>
-            <span class="led" id="lan-led"></span>
+            <div class="user-subtitle">активность</div>
+            <div class="dsc-detail" id="lan-detail"></div>
           </div>
-          <div class="dsc-detail" id="lan-detail"></div>
         </article>
 
         <!-- STEAM -->
         <article class="card soft w-steam reveal">
           <header class="w-head">
             <span class="w-title">steam --profile</span>
-            <span class="w-status" id="st-state">…</span>
           </header>
-          <div class="user-body">
-            <img class="user-ava" id="st-ava" src="https://avatars.fastly.steamstatic.com/f66810876e9f494a073bcc92e568975f6882c1df_full.jpg" alt="Steam avatar">
-            <div>
-              <div class="user-name" id="st-name">ᴅᴇɴᴅᴏʀ</div>
-              <div class="user-activity" id="st-activity">загрузка профиля…</div>
+          <div class="user-body user-body-stack">
+            <div class="user-head">
+              <img class="user-ava" id="st-ava" src="https://avatars.fastly.steamstatic.com/f66810876e9f494a073bcc92e568975f6882c1df_full.jpg" alt="Steam avatar">
+              <div class="user-info">
+                <div class="user-name-row">
+                  <span class="user-name" id="st-name">ᴅᴇɴᴅᴏʀ</span>
+                  <span class="user-state"><span class="led" id="st-led"></span><span id="st-state">…</span></span>
+                </div>
+                <div class="user-meta" id="st-meta">загрузка профиля…</div>
+              </div>
             </div>
-            <span class="led" id="st-led"></span>
+            <div class="user-subtitle">активность</div>
+            <div class="st-games" id="st-activity">загрузка игр…</div>
           </div>
           <div class="w-actions">
             <a class="btn" id="st-link" href="https://steamcommunity.com/id/DENDOR_YT" target="_blank" rel="noopener">профиль Steam</a>
@@ -377,18 +385,6 @@
           </div>
           <div class="w-actions">
             <a class="btn btn-solid" href="https://www.twitch.tv/DENDORoff" target="_blank" rel="noopener">смотреть на Twitch</a>
-          </div>
-        </article>
-
-        <!-- SOUNDCLOUD (появляется, если указан URL в config.js) -->
-        <article class="card w-soundcloud reveal" id="sc-card" hidden>
-          <header class="w-head">
-            <span class="w-title">soundcloud --player</span>
-            <span class="w-status">embed</span>
-          </header>
-          <iframe id="sc-frame" title="SoundCloud player" scrolling="no" frameborder="no" allow="autoplay; encrypted-media" loading="lazy"></iframe>
-          <div class="w-actions">
-            <a class="btn" id="sc-link" href="https://soundcloud.com" target="_blank" rel="noopener">открыть SoundCloud →</a>
           </div>
         </article>
 
@@ -423,9 +419,9 @@
     <div class="scrollbar-track"></div>
     <div class="scrollbar-thumb" id="scrollbar-thumb"></div>
   </div>
-  <script src="js/config.js?v=9"></script>
-  <script src="js/main.js?v=9"></script>
-  <script src="js/player.js?v=9"></script>
-  <script src="js/fx.js?v=9"></script>
+  <script src="js/config.js?v=10"></script>
+  <script src="js/main.js?v=10"></script>
+  <script src="js/player.js?v=10"></script>
+  <script src="js/fx.js?v=10"></script>
 </body>
 </html>

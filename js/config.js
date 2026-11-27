@@ -16,7 +16,7 @@ const CONFIG = {
 
   github: {
     user: "DENDORoff",
-    // Полный год недель: график растянут на всю высоту карточки.
+    // Полный год: 52 колонки-недели, 7 строк-дней недели.
     graphWeeks: 52,
   },
 
@@ -64,12 +64,6 @@ const CONFIG = {
 
   weather: {
     city: "Pavlodar", // Kazakhstan
-  },
-
-  // Если есть публичный профиль/плейлист SoundCloud — вставь ссылку сюда,
-  // и карточка с плеером появится автоматически. Без ключей API.
-  soundcloud: {
-    url: "https://soundcloud.com/dendor-music",
   },
 
   music: {

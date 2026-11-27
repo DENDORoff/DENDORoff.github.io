@@ -131,8 +131,8 @@
   document.addEventListener("click", clickSound, true);
   document.addEventListener("contextmenu", clickSound, true);
 
-  /* ---------- эквалайзер в шапке: реальные частотные данные плеера ---------- */
-  const eqSmooth = [0, 0, 0, 0, 0];
+  /* ---------- эквалайзер в шапке: редкие вертикальные точки ---------- */
+  const eqSmooth = [0, 0, 0, 0];
   function updateEq() {
     const eq = document.getElementById("top-eq");
     if (!eq) return;
@@ -140,19 +140,26 @@
     if (playing) {
       eq.removeAttribute("hidden");
       document.body.classList.add("fx-eq");
-      const bands = (window.MUSIC.bars || [0, 0, 0, 0, 0]);
+      const b = window.MUSIC.bars || [0, 0, 0, 0, 0];
+      // пять полос плеера мягко складываются в четыре спокойные точки
+      const targets = [
+        b[0] * 0.75 + b[1] * 0.25,
+        b[1] * 0.5 + b[2] * 0.5,
+        b[2] * 0.5 + b[3] * 0.5,
+        b[3] * 0.25 + b[4] * 0.75,
+      ];
       const bars = eq.querySelectorAll(".eq-bar");
       bars.forEach((bar, i) => {
-        const target = Math.max(0.15, Math.min(1, bands[i] || 0));
-        eqSmooth[i] += (target - eqSmooth[i]) * 0.35;
+        const target = Math.max(0.12, Math.min(1, targets[i] || 0));
+        eqSmooth[i] += (target - eqSmooth[i]) * 0.24;
         const h = eqSmooth[i];
-        bar.style.transform = `scaleX(${h.toFixed(3)})`;
-        bar.style.opacity = String((0.28 + 0.42 * h).toFixed(3));
+        bar.style.transform = `scaleY(${h.toFixed(3)})`;
+        bar.style.opacity = String((0.3 + 0.4 * h).toFixed(3));
       });
     } else {
       eq.setAttribute("hidden", "");
       document.body.classList.remove("fx-eq");
-      eqSmooth.forEach((_, i) => { eqSmooth[i] *= 0.9; });
+      eqSmooth.forEach((_, i) => { eqSmooth[i] *= 0.92; });
     }
   }
   setInterval(updateEq, 50);
@@ -229,6 +236,22 @@
 
   let mx = -100, my = -100, cx = -100, cy = -100, lastSpark = 0;
 
+  /* ---------- scroll: inertia + idle auto-scroll state ---------- */
+  let vel = 0;
+  let autoVel = 0;
+  let idleAt = performance.now();
+  let autoDir = 1; // 1 = вниз, -1 = вверх
+  let autoPhase = "idle"; // idle, accel, cruise, decel, pause
+  let autoTargetSpeed = 0;
+  let autoPhaseStart = 0;
+  let autoBrakeFrom = 0;
+
+  function wake() { idleAt = performance.now(); autoPhase = "idle"; autoVel = 0; }
+
+  function maxScroll() {
+    return Math.max(0, document.documentElement.scrollHeight - innerHeight);
+  }
+
   /* кастомный скроллбар */
   function updateScrollbar() {
     if (!sbWrap || !sbThumb) return;
@@ -237,12 +260,19 @@
     sbWrap.style.opacity = "1";
     const view = innerHeight;
     const total = document.documentElement.scrollHeight;
-    const thumbHeight = Math.max(40, (view / total) * view);
+    const thumbHeight = Math.max(24, (view / total) * view * 0.45);
     const scrollPct = window.scrollY / max;
     const trackH = innerHeight;
     const thumbTop = scrollPct * (trackH - thumbHeight);
     sbThumb.style.height = thumbHeight + "px";
     sbThumb.style.top = thumbTop + "px";
+    updateThumbStretch();
+  }
+
+  function updateThumbStretch() {
+    if (!sbThumb) return;
+    const stretch = Math.min(1.8, 1 + Math.abs(vel + autoVel) * 0.06);
+    sbThumb.style.transform = `scaleY(${stretch.toFixed(3)})`;
   }
 
   if (sbWrap && sbThumb) {
@@ -335,22 +365,9 @@
 
   /* ---------- scroll: inertia + idle auto-scroll ---------- */
 
-  let vel = 0;
-  let autoVel = 0;
-  let idleAt = performance.now();
-  let autoDir = 1; // 1 = вниз, -1 = вверх
-  let autoPhase = "idle"; // idle, accel, cruise, decel, pause
-  let autoTargetSpeed = 0;
-  let autoPhaseStart = 0;
-
-  function wake() { idleAt = performance.now(); autoPhase = "idle"; autoVel = 0; }
   ["pointerdown", "touchstart", "touchmove", "keydown"].forEach((ev) => {
     addEventListener(ev, wake, { passive: true });
   });
-
-  function maxScroll() {
-    return Math.max(0, document.documentElement.scrollHeight - innerHeight);
-  }
 
   addEventListener("wheel", (ev) => {
     wake();
@@ -432,9 +449,11 @@
     const max = maxScroll();
     const idle = now - idleAt > 4000;
 
-    /* автопрокрутка: разгон → движение до края → торможение → пауза → разворот */
-    const autoSpeed = 2.2;
-    const brake = Math.min(700, max * 0.25);
+    /* автопрокрутка: плавный разгон → медленный ход → торможение → пауза → разворот */
+    const autoSpeed = 1.15;
+    const accelMs = 1500;
+    const decelMs = 1500;
+    const brake = Math.min(90, Math.max(30, max * 0.03));
     if (opts.auto && idle && max > 0) {
       if (autoPhase === "idle") {
         autoPhase = "accel";
@@ -442,19 +461,22 @@
         autoVel = 0;
       }
       if (autoPhase === "accel") {
-        const t = Math.min(1, (now - autoPhaseStart) / 900);
+        const t = Math.min(1, (now - autoPhaseStart) / accelMs);
         autoTargetSpeed = ease(t) * autoSpeed * autoDir;
         if (t >= 1) { autoPhase = "cruise"; autoPhaseStart = now; }
       } else if (autoPhase === "cruise") {
         autoTargetSpeed = autoSpeed * autoDir;
         const left = autoDir > 0 ? max - window.scrollY : window.scrollY;
-        if (left <= brake) { autoPhase = "decel"; autoPhaseStart = now; }
+        if (left <= brake) {
+          autoPhase = "decel";
+          autoPhaseStart = now;
+          autoBrakeFrom = left;
+        }
       } else if (autoPhase === "decel") {
         const left = Math.max(0, autoDir > 0 ? max - window.scrollY : window.scrollY);
-        // минимальная «ползущая» скорость, чтобы гарантированно дойти до края
-        const k = Math.min(1, left / Math.max(1, brake));
-        autoTargetSpeed = (0.25 + 0.75 * ease(k)) * autoSpeed * autoDir;
-        if (left <= 2) {
+        const t = Math.min(1, (now - autoPhaseStart) / decelMs);
+        autoTargetSpeed = autoDir * (autoBrakeFrom / (decelMs / 16.67));
+        if (left <= 2 || t >= 1) {
           autoTargetSpeed = 0;
           autoVel = 0;
           window.scrollTo(0, autoDir > 0 ? max : 0);
@@ -463,13 +485,13 @@
         }
       } else if (autoPhase === "pause") {
         autoTargetSpeed = 0;
-        if (now - autoPhaseStart > 1400) {
+        if (now - autoPhaseStart > 1600) {
           autoDir = -autoDir;
           autoPhase = "accel";
           autoPhaseStart = now;
         }
       }
-      autoVel += (autoTargetSpeed - autoVel) * 0.12;
+      autoVel += (autoTargetSpeed - autoVel) * 0.07;
     } else {
       autoTargetSpeed = 0;
     }
@@ -482,6 +504,7 @@
       vel *= 0.93;
       if (next <= 0 || next >= max - 1) vel = 0;
     }
+    updateThumbStretch();
 
     const pulse = opts.music ? ((window.MUSIC && window.MUSIC.pulse) || 0) : 0;
 
